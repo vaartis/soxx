@@ -9,6 +9,6 @@ target
 
 /.ensime*
 
-app/assets/*.bin
-app/assets/node_modules
+assets/*.bin
+**/node_modules
 public/

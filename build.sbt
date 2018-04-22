@@ -1,6 +1,6 @@
 import NPM._
 
-PlayKeys.playRunHooks += NPM(baseDirectory.value / "app" / "assets")
+PlayKeys.playRunHooks += NPM(baseDirectory.value / "assets")
 
 name := """Soxx"""
 organization := "org.soxx"
