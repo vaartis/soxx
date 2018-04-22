@@ -32,7 +32,7 @@ class ScrapperSupervisor @Inject()
         UpdateOptions().upsert(true)
       )
       .toFuture(),
-    Duration.Inf
+    5 seconds
   )
 
   context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
