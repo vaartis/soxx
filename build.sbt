@@ -14,14 +14,11 @@ val theScalaVersion = "2.12.4"
 scalaVersion := theScalaVersion
 ensimeScalaVersion in ThisBuild := theScalaVersion
 
-libraryDependencies += guice
-libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
+libraryDependencies ++= Seq(
+  guice,
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
 
-libraryDependencies += ws
-libraryDependencies += "org.mongodb.scala" %% "mongo-scala-driver" % "2.2.1"
-
-// Adds additional packages into Twirl
-//TwirlKeys.templateImports += "org.soxx.controllers._"
-
-// Adds additional packages into conf/routes
-// play.sbt.routes.RoutesKeys.routesImport += "org.soxx.binders._"
+  "org.mongodb.scala" %% "mongo-scala-driver" % "2.2.1",
+  ws,
+  "com.corundumstudio.socketio" % "netty-socketio" % "1.7.14",
+)
