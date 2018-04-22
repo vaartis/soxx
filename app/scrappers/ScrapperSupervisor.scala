@@ -7,6 +7,7 @@ import scala.concurrent._
 import scala.concurrent.duration._
 
 import play.api.libs.ws._
+import play.api.inject.ApplicationLifecycle
 
 import org.mongodb.scala._
 import org.mongodb.scala.model._
@@ -17,7 +18,8 @@ class ScrapperSupervisor @Inject()
   (
     implicit ec: ExecutionContext,
     ws: WSClient,
-    mongo: Mongo
+    mongo: Mongo,
+    lifecycle: ApplicationLifecycle
   ) extends Actor {
   override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
 
@@ -34,6 +36,12 @@ class ScrapperSupervisor @Inject()
   )
 
   context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
+
+  lifecycle.addStopHook { () =>
+    context.stop(self)
+
+    Future { }
+  }
 
   override def receive = {
     case _ => ???
