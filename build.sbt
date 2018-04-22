@@ -1,3 +1,7 @@
+import NPM._
+
+PlayKeys.playRunHooks += NPM(baseDirectory.value / "app" / "assets")
+
 name := """Soxx"""
 organization := "org.soxx"
 
