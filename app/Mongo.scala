@@ -3,11 +3,17 @@ package soxx.mongowrapper
 import javax.inject._
 
 import org.mongodb.scala.MongoClient
+import play.api.inject.ApplicationLifecycle
+import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
-class Mongo() {
-  val Client: MongoClient = MongoClient()
-  lazy val DB = Client.getDatabase("soxx")
+class Mongo @Inject() (implicit lifecycle: ApplicationLifecycle, ec: ExecutionContext) {
+  val client: MongoClient = MongoClient()
+  lazy val db = client.getDatabase("soxx")
 
-  implicit def wrapper2mongo(arg: Mongo): MongoClient = arg.Client
+  lifecycle.addStopHook { () =>
+    client.close()
+
+    Future { }
+  }
 }

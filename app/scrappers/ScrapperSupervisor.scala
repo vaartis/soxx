@@ -22,7 +22,7 @@ class ScrapperSupervisor @Inject()
   override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
 
   Await.result(
-    mongo.DB
+    mongo.db
       .getCollection("imboard_info")
       .replaceOne(
         Document("_id" -> "safebooru"),
