@@ -1,5 +1,6 @@
 package soxx.scrappers
 
+import com.mongodb.MongoCommandException
 import java.util.concurrent.{Executors}
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -62,7 +63,7 @@ abstract class OldDanbooruScrapper ()
       "md5" -> i.md5,
 
       "originalPost" -> s"${baseUrl}/index.php?page=post&s=view&id=${i.id}",
-      "originalImage" -> s"${baseUrl}/images/${i.directory}/${i.id}",
+      "originalImage" -> s"${baseUrl}/images/${i.directory}/${i.name}",
 
       "metadataOnly" -> true
     )
@@ -70,12 +71,35 @@ abstract class OldDanbooruScrapper ()
 
   /* --- */
 
-  val name: String
+  def name: String
 
-  val baseUrl: String
-  val apiAddition = "index.php?page=dapi&s=post&q=index"
+  def baseUrl: String
+  def apiAddition = "index.php?page=dapi&s=post&q=index"
 
   var materializer: Option[ActorMaterializer] = None
+
+  // Create a collection if it doesnt exist and create an index
+  // on the originalID field
+  Await.result(
+    mongo.db
+      .listCollectionNames
+      .collect
+      .andThen { case Success(collections) =>
+        if (!collections.contains(name)) {
+          mongo.db
+            .createCollection(name)
+            .andThen {
+              case Success(_) =>
+                mongo.db
+                  .getCollection(name)
+                  .createIndex(Document("originalID" -> 1), IndexOptions().unique(true))
+                  .toFuture
+            }.toFuture
+        }
+      }
+      .toFuture,
+    5 seconds
+  )
 
   def startIndexing(fromPage: Int, toPage: Option[Int] = None): Unit = {
     if (materializer == None) {
@@ -126,7 +150,7 @@ abstract class OldDanbooruScrapper ()
               }
 
               Await.result(
-                mongo.DB
+                mongo.db
                   .getCollection(name)
                   .bulkWrite(insertOperations, BulkWriteOptions().ordered(false))
                   .toFuture(),
@@ -161,6 +185,6 @@ class SafebooruScrapper ()
     ec: ExecutionContext
   ) extends OldDanbooruScrapper {
 
-  override val baseUrl = "https://safebooru.org"
-  override val name = "safebooru"
+  override def baseUrl = "https://safebooru.org"
+  override def name = "safebooru"
 }
