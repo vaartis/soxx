@@ -1,6 +1,5 @@
 package soxx.scrappers
 
-import com.mongodb.MongoCommandException
 import java.util.concurrent.{Executors}
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -20,6 +19,8 @@ import soxx.mongowrapper._
 import org.mongodb.scala._
 import org.mongodb.scala.bson.{BsonTransformer, BsonDocument}
 import org.mongodb.scala.model._
+import com.mongodb.MongoCommandException
+import com.mongodb.client.result.UpdateResult
 
 abstract class OldDanbooruScrapper ()
   (
@@ -47,10 +48,26 @@ abstract class OldDanbooruScrapper ()
 
   def baseUrl: String
   def apiAddition = "index.php?page=dapi&s=post&q=index"
+  def favicon = "favicon.ico"
 
   def logger = Logger(this.getClass)
 
   var materializer: Option[ActorMaterializer] = None
+
+  override def preStart() {
+    mongo.db
+      .getCollection[BoardInfo]("imboard_info")
+      .replaceOne(
+        Document(
+          "_id" -> name,
+        ),
+        BoardInfo(name, favicon = f"${baseUrl}/${favicon}"),
+        UpdateOptions().upsert(true)
+      )
+      .subscribe { (_: UpdateResult) =>
+        logger.info("Updated 'imboard_info'")
+      }
+  }
 
   def startIndexing(fromPage: Int, toPage: Option[Int] = None): Unit = {
     if (materializer == None) {

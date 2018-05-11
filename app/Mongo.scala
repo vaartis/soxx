@@ -8,15 +8,15 @@ import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
 import org.bson.codecs.configuration.CodecRegistries.{fromRegistries, fromProviders}
 
 import play.api.inject.ApplicationLifecycle
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
-import soxx.scrappers.Image
+import soxx.scrappers.{Image, BoardInfo}
 
 @Singleton
 class Mongo @Inject() (implicit lifecycle: ApplicationLifecycle, ec: ExecutionContext) {
   val client: MongoClient = MongoClient()
 
-  val codecRegistry = fromRegistries(fromProviders(classOf[Image]), DEFAULT_CODEC_REGISTRY)
+  val codecRegistry = fromRegistries(fromProviders(classOf[Image], classOf[BoardInfo]), DEFAULT_CODEC_REGISTRY)
 
   lazy val db = client.getDatabase("soxx").withCodecRegistry(codecRegistry)
 

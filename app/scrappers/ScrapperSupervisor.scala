@@ -1,6 +1,5 @@
 package soxx.scrappers
 
-import com.mongodb.client.result.UpdateResult
 import javax.inject._
 
 import akka.actor._
@@ -29,17 +28,6 @@ class ScrapperSupervisor @Inject()
   val logger = Logger(this.getClass)
 
   override def preStart() {
-    mongo.db
-      .getCollection("imboard_info")
-      .replaceOne(
-        Document("_id" -> "safebooru"),
-        Document(),
-        UpdateOptions().upsert(true)
-      )
-      .subscribe { (_: UpdateResult) =>
-        logger.info("Updated 'imboard_info'")
-      }
-
     mongo.db
       .getCollection("images")
       .createIndexes(Seq(IndexModel(Document("originalID" -> 1)), IndexModel(Document("from" -> 1))))
