@@ -34,10 +34,10 @@ abstract class OldDanbooruScrapper ()
     height: Int,
     width: Int,
     score: Int,
-    name: String,
+    image: String,
     directory: String,
     tags: String,
-    md5: String
+    hash: String
   )
 
   implicit val oldDanbooruImageFormat = Json.format[OldDanbooruImage]
@@ -117,15 +117,15 @@ abstract class OldDanbooruScrapper ()
                     height = img.height,
                     width = img.width,
                     score = img.score,
-                    name = img.name,
+                    name = img.image,
                     tags = img.tags.split(" ").toSeq,
-                    md5 = img.md5,
+                    md5 = img.hash,
                     from = name,
-                    extension = img.name.substring(img.name.lastIndexOf('.')),
+                    extension = img.image.substring(img.image.lastIndexOf('.')),
 
                     originalPost = s"${baseUrl}/index.php?page=post&s=view&id=${img.id}",
-                    originalImage = s"${baseUrl}/images/${img.directory}/${img.name}",
-                    originalThumbnail = s"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.name}",
+                    originalImage = s"${baseUrl}/images/${img.directory}/${img.image}",
+                    originalThumbnail = s"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.image}",
 
                     metadataOnly = true
                   ),
