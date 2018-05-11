@@ -1,9 +1,16 @@
 const path = require("path")
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
 
 module.exports = {
     devtool: "source-map",
     entry: {
-        admin_panel: "./js/admin_panel.jsx"
+        index: "./js/index.js"
+    },
+
+    resolve: {
+        alias: {
+            vue: 'vue/dist/vue.js'
+        }
     },
 
     output: {
@@ -18,9 +25,15 @@ module.exports = {
                 use: ["style-loader", "css-loader"]
             },
             {
+                test: /\.vue$/,
+                use: ["vue-loader"]
             }
         ]
     },
+
+    plugins: [
+        new VueLoaderPlugin()
+    ],
 
     mode: "development"
 }
