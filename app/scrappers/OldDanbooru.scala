@@ -7,6 +7,7 @@ import scala.concurrent.duration._
 
 import play.api.libs.ws._
 import play.api.libs.json._
+import play.api.Logger
 import play.api.libs.functional.syntax._
 import scala.util._
 
@@ -47,30 +48,9 @@ abstract class OldDanbooruScrapper ()
   def baseUrl: String
   def apiAddition = "index.php?page=dapi&s=post&q=index"
 
-  var materializer: Option[ActorMaterializer] = None
+  def logger = Logger(this.getClass)
 
-  // Create a collection if it doesnt exist and create an index
-  // on the originalID field
-  Await.result(
-    mongo.db
-      .listCollectionNames
-      .collect
-      .andThen { case Success(collections) =>
-        if (!collections.contains(name)) {
-          mongo.db
-            .createCollection(name)
-            .andThen {
-              case Success(_) =>
-                mongo.db
-                  .getCollection(name)
-                  .createIndex(Document("originalID" -> 1), IndexOptions().unique(true))
-                  .toFuture
-            }.toFuture
-        }
-      }
-      .toFuture,
-    5 seconds
-  )
+  var materializer: Option[ActorMaterializer] = None
 
   def startIndexing(fromPage: Int, toPage: Option[Int] = None): Unit = {
     if (materializer == None) {
@@ -160,6 +140,10 @@ abstract class OldDanbooruScrapper ()
 
     case StopIndexing =>
       stopIndexing()
+  }
+
+  override def postStop = {
+    logger.info("Stopped")
   }
 }
 
