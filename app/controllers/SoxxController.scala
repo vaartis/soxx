@@ -75,9 +75,4 @@ class SoxxController @Inject()(
     )
   }
 
-
-  def admin_panel() = Action { implicit request: Request[AnyContent] =>
-    Ok(views.html.admin_panel())
-  }
-
 }
