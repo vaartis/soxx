@@ -1,5 +1,7 @@
 package controllers
 
+import akka.util.Timeout
+import org.mongodb.scala._
 import scala.concurrent.duration._
 import scala.util._
 import scala.concurrent._
@@ -7,9 +9,9 @@ import scala.concurrent._
 import javax.inject._
 import play.api._
 import play.api.mvc._
+import play.api.libs.json._
 
 import akka.actor._
-import akka.util.Timeout
 
 import soxx.mongowrapper.Mongo
 import soxx.scrappers._
@@ -19,12 +21,13 @@ import soxx.scrappers._
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(
+class SoxxController @Inject()(
   cc: ControllerComponents,
-  system: ActorSystem
+  system: ActorSystem,
+  mongo: Mongo
 )(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
-  implicit val resolveTimeout = Timeout(FiniteDuration(5, SECONDS))
+  implicit val actorResolveTimeout: Timeout = 5 seconds
 
   val scrapperSupervisor = Await.result(
     system
@@ -33,23 +36,8 @@ class HomeController @Inject()(
     Duration.Inf
   )
 
-  /**
-   * Create an Action to render an HTML page.
-   *
-   * The configuration in the `routes` file means that this method
-   * will be called when the application receives a `GET` request with
-   * a path of `/`.
-   */
-  def index() = Action { implicit request: Request[AnyContent] =>
-    system
-      .actorSelection(scrapperSupervisor.path / "safebooru-scrapper")
-      .resolveOne()
-      .recover { case e => println(e); throw e }
-      .andThen {
-        case Success(actRef) =>
-          actRef ! StartIndexing(fromPage = 1)
-      }
 
+  def index() = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.index())
   }
 
@@ -64,6 +52,32 @@ class HomeController @Inject()(
       }
 
     Ok(views.html.index())
+  }
+
+  def images(query: Option[String], offset: Int, _limit: Int) = Action { implicit request: Request[AnyContent] =>
+
+    // Hard-limit "limit" to 250
+    val limit: Int = if (_limit > 250) { 250 } else { _limit }
+
+    Ok(
+      Json.toJson(
+        Await.result(
+          mongo.db
+            .getCollection[Image]("images")
+            .find(/* Add query support */)
+            .skip(offset)
+            .limit(limit)
+            .sort(Document("_id" -> -1))
+            .toFuture,
+          Duration.Inf
+        )
+      )
+    )
+  }
+
+
+  def admin_panel() = Action { implicit request: Request[AnyContent] =>
+    Ok(views.html.admin_panel())
   }
 
 }
