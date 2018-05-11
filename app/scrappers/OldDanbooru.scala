@@ -27,7 +27,7 @@ abstract class OldDanbooruScrapper ()
     ec: ExecutionContext
   ) extends Actor {
 
-  case class Image(
+  case class OldDanbooruImage(
     id: Int,
     height: Int,
     width: Int,
@@ -38,36 +38,7 @@ abstract class OldDanbooruScrapper ()
     md5: String
   )
 
-  /* Converters  */
-
-  implicit val imageReads: Reads[Image] = (
-    (JsPath \ "id").read[Int] and
-      (JsPath \ "height").read[Int] and
-      (JsPath \ "width").read[Int] and
-      (JsPath \ "score").read[Int] and
-      (JsPath \ "image").read[String] and
-      (JsPath \ "directory").read[String] and
-      (JsPath \ "tags").read[String] and
-      (JsPath \ "hash").read[String]
-  )(Image.apply _)
-
-  implicit def image2Document(i: Image): Document = {
-    Document(
-      "originalID" -> i.id,
-      "height" -> i.height,
-      "width" -> i.width,
-      "score" -> i.score,
-      "name" -> i.name,
-      "extension" -> i.name.substring(i.name.lastIndexOf('.')),
-      "tags" -> i.tags.split(" ").toSeq,
-      "md5" -> i.md5,
-
-      "originalPost" -> s"${baseUrl}/index.php?page=post&s=view&id=${i.id}",
-      "originalImage" -> s"${baseUrl}/images/${i.directory}/${i.name}",
-
-      "metadataOnly" -> true
-    )
-  }
+  implicit val oldDanbooruImageFormat = Json.format[OldDanbooruImage]
 
   /* --- */
 
@@ -136,28 +107,41 @@ abstract class OldDanbooruScrapper ()
                 .get()
                 .map { res => (res, currentPage) }
             }
-            .map { case (json_resp, currentPage) => (json_resp.json.as[Seq[Image]], currentPage) }
+            .map { case (json_resp, currentPage) => (json_resp.json.as[Seq[OldDanbooruImage]], currentPage) }
             .runForeach { case (images, currentPage) =>
               import org.mongodb.scala.model.Updates._
               import org.mongodb.scala.model.Filters._
 
-              val insertOperations: Seq[WriteModel[Document]] = images.map { img =>
+              val insertOperations = images.map { img =>
                 ReplaceOneModel(
                   equal("originalID", img.id),
-                  image2Document(img), // Implicit convertion doesnt work here ._.
+                  Image(
+                    originalID = img.id,
+                    height = img.height,
+                    width = img.width,
+                    score = img.score,
+                    name = img.name,
+                    tags = img.tags.split(" ").toSeq,
+                    md5 = img.md5,
+                    from = name,
+                    extension = img.name.substring(img.name.lastIndexOf('.')),
+
+                    originalPost = s"${baseUrl}/index.php?page=post&s=view&id=${img.id}",
+                    originalImage = s"${baseUrl}/images/${img.directory}/${img.name}",
+                    originalThumbnail = s"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.name}",
+
+                    metadataOnly = true
+                  ),
                   UpdateOptions().upsert(true)
                 )
               }
 
-              Await.result(
-                mongo.db
-                  .getCollection(name)
-                  .bulkWrite(insertOperations, BulkWriteOptions().ordered(false))
-                  .toFuture(),
-                5 seconds
-              )
-
-              println(s"Finished page ${currentPage} of ${name}")
+              mongo.db
+                .getCollection[Image]("images")
+                .bulkWrite(insertOperations, BulkWriteOptions().ordered(false))
+                .subscribe(
+                  (_: BulkWriteResult) => logger.info(s"Finished page ${currentPage}")
+                )
             }
         }
     }
@@ -173,6 +157,7 @@ abstract class OldDanbooruScrapper ()
   override def receive = {
     case StartIndexing(page) =>
       startIndexing(page)
+
     case StopIndexing =>
       stopIndexing()
   }
