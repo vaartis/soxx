@@ -1,5 +1,6 @@
 package soxx.scrappers
 
+import com.mongodb.client.result.UpdateResult
 import javax.inject._
 
 import akka.actor._
@@ -8,9 +9,11 @@ import scala.concurrent.duration._
 
 import play.api.libs.ws._
 import play.api.inject.ApplicationLifecycle
+import play.api.Logger
 
 import org.mongodb.scala._
 import org.mongodb.scala.model._
+import scala.util._
 import soxx.mongowrapper._
 
 @Singleton
@@ -21,9 +24,11 @@ class ScrapperSupervisor @Inject()
     mongo: Mongo,
     lifecycle: ApplicationLifecycle
   ) extends Actor {
-  override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
 
-  Await.result(
+  override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
+  val logger = Logger(this.getClass)
+
+  override def preStart() {
     mongo.db
       .getCollection("imboard_info")
       .replaceOne(
@@ -31,16 +36,24 @@ class ScrapperSupervisor @Inject()
         Document(),
         UpdateOptions().upsert(true)
       )
-      .toFuture(),
-    5 seconds
-  )
+      .subscribe { (_: UpdateResult) =>
+        logger.info("Updated 'imboard_info'")
+      }
 
-  context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
+    mongo.db
+      .getCollection("images")
+      .createIndexes(Seq(IndexModel(Document("originalID" -> 1)), IndexModel(Document("from" -> 1))))
+      .subscribe(
+        (_: String) => {
+          logger.info(f"Created/Updated image indexes")
+        }
+      )
 
-  lifecycle.addStopHook { () =>
-    context.stop(self)
+    context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
 
-    Future { }
+    lifecycle.addStopHook { () =>
+      Future { context.stop(self) }
+    }
   }
 
   override def receive = {
