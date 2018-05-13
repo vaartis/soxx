@@ -1,5 +1,7 @@
 package soxx.scrappers
 
+import java.util.Arrays
+import javax.inject._
 import java.util.concurrent.{Executors}
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -74,6 +76,8 @@ abstract class OldDanbooruScrapper ()
       implicit val actualMaterializer = ActorMaterializer()(context)
       materializer = Some(actualMaterializer)
 
+      val imageCollection = mongo.db.getCollection[Image]("images")
+
       ws
         .url(s"${baseUrl}/${apiAddition}")
         .addQueryStringParameters(("pid", fromPage.toString))
@@ -109,33 +113,56 @@ abstract class OldDanbooruScrapper ()
               import org.mongodb.scala.model.Updates._
               import org.mongodb.scala.model.Filters._
 
-              val insertOperations = images.map { img =>
-                ReplaceOneModel(
-                  equal("originalID", img.id),
-                  Image(
-                    originalID = img.id,
-                    height = img.height,
-                    width = img.width,
-                    score = img.score,
-                    name = img.image,
-                    tags = img.tags.split(" ").toSeq,
-                    md5 = img.hash,
-                    from = name,
-                    extension = img.image.substring(img.image.lastIndexOf('.')),
+              val operations = images.map { img =>
+                val tagList = img.tags.split(" ").toSeq
 
-                    originalPost = s"${baseUrl}/index.php?page=post&s=view&id=${img.id}",
-                    originalImage = s"${baseUrl}/images/${img.directory}/${img.image}",
-                    originalThumbnail = s"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.image}",
+                // If it's a new picture
+                if (Await.result(imageCollection.find(equal("md5", img.hash)).toFuture(), 5 seconds).isEmpty) {
+                  InsertOneModel(
+                    Image(
+                      height = img.height,
+                      width = img.width,
+                      tags = tagList,
+                      md5 = img.hash,
+                      from = Seq(
+                        From(
+                          id = img.id,
+                          name = name,
+                          imageName = img.image,
+                          score = img.score,
+                          post = f"${baseUrl}/index.php?page=post&s=view&id=${img.id}",
+                          image = f"${baseUrl}/images/${img.directory}/${img.image}",
+                          thumbnail = f"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.image}"
+                        )
+                      ),
+                      extension = img.image.substring(img.image.lastIndexOf('.')),
+                      metadataOnly = true
+                    )
+                  )
+                } else {
+                  import org.mongodb.scala.model.Updates._
 
-                    metadataOnly = true
-                  ),
-                  UpdateOptions().upsert(true)
-                )
+                  UpdateOneModel(
+                    equal("md5", img.hash),
+                    combine(
+                      // Merge tags
+                      addEachToSet("tags", tagList:_*),
+
+                      // Update score
+                      set("from.$[board].score", img.score),
+                    ),
+
+                    // Find this imageboard's entry by name
+                    UpdateOptions()
+                      .arrayFilters(Arrays.asList(
+                        equal("board.name", name)
+                      ))
+                  )
+                }
               }
 
-              mongo.db
-                .getCollection[Image]("images")
-                .bulkWrite(insertOperations, BulkWriteOptions().ordered(false))
+              imageCollection
+                .bulkWrite(operations, BulkWriteOptions().ordered(false))
                 .subscribe(
                   (_: BulkWriteResult) => logger.info(s"Finished page ${currentPage}")
                 )
