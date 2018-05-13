@@ -30,7 +30,13 @@ class ScrapperSupervisor @Inject()
   override def preStart() {
     mongo.db
       .getCollection("images")
-      .createIndexes(Seq(IndexModel(Document("originalID" -> 1)), IndexModel(Document("from" -> 1))))
+      .createIndexes(
+        Seq(
+          IndexModel(Document("originalID" -> 1)),
+          IndexModel(Document("from" -> 1)),
+          IndexModel(Document("md5" -> 1))
+        )
+      )
       .subscribe(
         (_: String) => {
           logger.info(f"Created/Updated image indexes")
