@@ -54,6 +54,22 @@ class SoxxController @Inject()(
     Ok(views.html.index())
   }
 
+  def imboard_info(name: Option[String]) = Action { implicit request: Request[AnyContent] =>
+    val collection = mongo.db
+      .getCollection[BoardInfo]("imboard_info")
+
+    Ok(
+      Json.toJson(
+        name match {
+          case Some(nm) =>
+            Await.result(collection.find(Document("_id" -> name)).toFuture, 5 seconds)
+          case None =>
+            Await.result(collection.find().toFuture, 5 seconds)
+        }
+      )
+    )
+  }
+
   def images(query: Option[String], offset: Int, _limit: Int) = Action { implicit request: Request[AnyContent] =>
 
     // Hard-limit "limit" to 250

@@ -7,6 +7,7 @@
 GET     /                           controllers.SoxxController.index
 GET     /stop                       controllers.SoxxController.stop
 GET     /images                     controllers.SoxxController.images(query: Option[String] = None, offset: Int = 0, limit: Int = 25)
+GET     /imboard_info               controllers.SoxxController.imboard_info(name: Option[String] = None)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
