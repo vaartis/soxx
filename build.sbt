@@ -14,6 +14,8 @@ val theScalaVersion = "2.12.4"
 scalaVersion := theScalaVersion
 ensimeScalaVersion in ThisBuild := theScalaVersion
 
+scalacOptions += "-feature"
+
 libraryDependencies ++= Seq(
   guice,
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
