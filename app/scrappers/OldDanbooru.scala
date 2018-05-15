@@ -201,3 +201,15 @@ class SafebooruScrapper ()
   override def baseUrl = "https://safebooru.org"
   override def name = "safebooru"
 }
+
+class FurrybooruScrapper ()
+  (
+    implicit ws: WSClient,
+    mongo: Mongo,
+    ec: ExecutionContext
+  ) extends OldDanbooruScrapper {
+
+  // Furrybooru doesnt support https
+  override def baseUrl = "http://furry.booru.org"
+  override def name = "furrybooru"
+}

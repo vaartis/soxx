@@ -43,7 +43,9 @@ class ScrapperSupervisor @Inject()
         }
       )
 
+    // Start scrapper actors
     context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
+    context.actorOf(Props(new FurrybooruScrapper), "furrybooru-scrapper")
 
     lifecycle.addStopHook { () =>
       Future { context.stop(self) }
