@@ -14,7 +14,14 @@ val theScalaVersion = "2.12.4"
 scalaVersion := theScalaVersion
 ensimeScalaVersion in ThisBuild := theScalaVersion
 
-scalacOptions += "-feature"
+scalacOptions ++= Seq(
+  "-feature",
+  /*
+  "-Ywarn-unused-import",
+  "-Ywarn-unused",
+  "-Ywarn-dead-code"
+   */
+)
 
 libraryDependencies ++= Seq(
   guice,
