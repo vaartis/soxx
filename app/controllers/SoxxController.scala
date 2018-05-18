@@ -1,19 +1,15 @@
 package controllers
 
-import akka.util.Timeout
-import org.mongodb.scala._
+import scala.language.postfixOps
 import scala.concurrent.duration._
 import scala.util._
 import scala.concurrent._
-
 import javax.inject._
-import play.api._
-import play.api.mvc._
-import play.api.libs.json._
 
+import akka.util.Timeout
+import play.api.mvc._
 import akka.actor._
 
-import soxx.mongowrapper.Mongo
 import soxx.scrappers._
 
 /**

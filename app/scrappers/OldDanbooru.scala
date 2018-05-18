@@ -1,28 +1,11 @@
 package soxx.scrappers
 
-import java.util.Arrays
-import javax.inject._
-import java.util.concurrent.{Executors}
 import scala.concurrent._
-import scala.concurrent.duration._
 
 import play.api.libs.ws._
 import play.api.libs.json._
-import play.api.Logger
-import play.api.libs.functional.syntax._
-import scala.util._
-
-import akka._
-import akka.actor._
-import akka.stream._
-import akka.stream.scaladsl._
 
 import soxx.mongowrapper._
-import org.mongodb.scala._
-import org.mongodb.scala.bson.{BsonTransformer, BsonDocument}
-import org.mongodb.scala.model._
-import com.mongodb.MongoCommandException
-import com.mongodb.client.result.UpdateResult
 
 abstract class OldDanbooruScrapper ()
   (

@@ -6,17 +6,13 @@ import scala.concurrent.duration._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import play.api.libs.json._
-import play.api.libs.ws._
 import akka.actor._
 import play.api.Logger
 import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.reflect.ClassTag
 
 import soxx.mongowrapper._
 import org.mongodb.scala._
-import org.mongodb.scala.bson.{BsonTransformer, BsonDocument}
 import org.mongodb.scala.model._
-import com.mongodb.MongoCommandException
 import com.mongodb.client.result.UpdateResult
 
 /** A base for all scrappers.

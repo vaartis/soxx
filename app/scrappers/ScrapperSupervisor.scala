@@ -4,7 +4,6 @@ import javax.inject._
 
 import akka.actor._
 import scala.concurrent._
-import scala.concurrent.duration._
 
 import play.api.libs.ws._
 import play.api.inject.ApplicationLifecycle
@@ -12,7 +11,6 @@ import play.api.Logger
 
 import org.mongodb.scala._
 import org.mongodb.scala.model._
-import scala.util._
 import soxx.mongowrapper._
 
 @Singleton

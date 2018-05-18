@@ -1,7 +1,6 @@
 package soxx.scrappers
 
 import org.bson.types.ObjectId
-import org.mongodb.scala.bson.collection.immutable.Document
 import play.api.libs.json._
 
 case class Image(
