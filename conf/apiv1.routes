@@ -1,0 +1,5 @@
+# Images list
+GET     /images          controllers.apiv1.APIv1Controller.images(query: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 25)
+
+# Imageboard info
+GET     /imboard_info    controllers.apiv1.APIv1Controller.imboard_info(name: Option[String] = None)

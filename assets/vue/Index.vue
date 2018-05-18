@@ -36,7 +36,7 @@
      },
 
      mounted() {
-         fetch("/imboard_info")
+         fetch("/api/v1/imboard_info")
              .then(resp => {
                  resp.json().then(boards => {
                      _.forEach(boards, (board) => {
@@ -44,10 +44,10 @@
                      })
                  })
              })
-         fetch("/images")
+         fetch("/api/v1/images")
              .then(resp => {
                  resp.json().then(imgs => {
-                     this.images = imgs;
+                     this.images = imgs.result;
                  })
              })
      }

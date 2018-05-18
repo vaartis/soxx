@@ -12,15 +12,10 @@ import akka.actor._
 
 import soxx.scrappers._
 
-/**
- * This controller creates an `Action` to handle HTTP requests to the
- * application's home page.
- */
 @Singleton
 class SoxxController @Inject()(
   cc: ControllerComponents,
-  system: ActorSystem,
-  mongo: Mongo
+  system: ActorSystem
 )(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
   implicit val actorResolveTimeout: Timeout = 5 seconds
@@ -49,42 +44,4 @@ class SoxxController @Inject()(
 
     Ok(views.html.index())
   }
-
-  def imboard_info(name: Option[String]) = Action { implicit request: Request[AnyContent] =>
-    val collection = mongo.db
-      .getCollection[BoardInfo]("imboard_info")
-
-    Ok(
-      Json.toJson(
-        name match {
-          case Some(nm) =>
-            Await.result(collection.find(Document("_id" -> name)).toFuture, 5 seconds)
-          case None =>
-            Await.result(collection.find().toFuture, 5 seconds)
-        }
-      )
-    )
-  }
-
-  def images(query: Option[String], offset: Int, _limit: Int) = Action { implicit request: Request[AnyContent] =>
-
-    // Hard-limit "limit" to 250
-    val limit: Int = if (_limit > 250) { 250 } else { _limit }
-
-    Ok(
-      Json.toJson(
-        Await.result(
-          mongo.db
-            .getCollection[Image]("images")
-            .find(/* Add query support */)
-            .skip(offset)
-            .limit(limit)
-            .sort(Document("_id" -> -1))
-            .toFuture,
-          Duration.Inf
-        )
-      )
-    )
-  }
-
 }
