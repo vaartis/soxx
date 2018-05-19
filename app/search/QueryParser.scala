@@ -13,7 +13,7 @@ case class RegexTag(value: Regex) extends QueryTag
 /** Search query parser.
   *
   * Parses search queries separated by spaces, it recognizes full tags,
-  * tag excludes and regex tags with a special syntax ~regex~regex goes here!~.
+  * tag excludes and regex tags with a special syntax regex~regex goes here!~.
   * Note the the previous makes tildes otherwise unusable in searching. I suppose this
   * issue will be addressed in the future.
   */

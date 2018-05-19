@@ -25,7 +25,7 @@ class QueryParserSpec extends FlatSpec with Matchers with Inside {
     }
   }
 
-  it should "return a RegexTag when given a ~regex~" in {
+  it should "return a RegexTag when given a regex~" in {
     import parser.Success
 
     inside(parser.parseQuery("regex~\\d~")) { case Success(List(RegexTag(matched)), _) =>
