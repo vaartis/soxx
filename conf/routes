@@ -5,6 +5,7 @@
 
 # An example controller showing a sample home page
 GET     /                           controllers.SoxxController.index
+GET     /index                      controllers.SoxxController.index
 GET     /stop                       controllers.SoxxController.stop
 
 # Map static resources from the /public folder to the /assets URL path
