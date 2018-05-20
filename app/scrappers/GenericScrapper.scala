@@ -23,8 +23,7 @@ import com.mongodb.client.result.UpdateResult
  */
 abstract class GenericScrapper ()
   (
-    implicit ws: WSClient,
-    mongo: Mongo,
+    implicit mongo: Mongo,
     ec: ExecutionContext
   ) extends Actor {
 
