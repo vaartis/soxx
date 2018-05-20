@@ -42,6 +42,8 @@ class SoxxController @Inject()(
           actRef ! StopIndexing
       }
 
-    Ok(views.html.index())
+    Ok("OK");
+
+    // Ok(views.html.index())
   }
 }
