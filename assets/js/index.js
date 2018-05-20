@@ -1,4 +1,3 @@
-import Vue from "vue";
 import Index from "../vue/Index.vue";
 
 let vm = new Vue({

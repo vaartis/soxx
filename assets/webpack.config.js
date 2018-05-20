@@ -1,5 +1,6 @@
 const path = require("path")
 const VueLoaderPlugin = require('vue-loader/lib/plugin')
+const webpack = require("webpack");
 
 module.exports = {
     devtool: "source-map",
@@ -34,7 +35,10 @@ module.exports = {
     },
 
     plugins: [
-        new VueLoaderPlugin()
+        new VueLoaderPlugin(),
+        new webpack.ProvidePlugin({
+            Vue: ["vue"]
+        })
     ],
 
     mode: "development"
