@@ -13,15 +13,32 @@
             <input class="btn btn-light form-control mx-2"
                    type="button" value="Help"
                    data-toggle="collapse" data-target="#search-help-content" />
-            <div class="collapse" id="search-help-content">
+            <div class="collapse mt-3" id="search-help-content">
                 <table class="table">
                     <thead>
                         <tr>
                             <th scope="col">Syntax</th>
                             <th scope="col">Meaning</th>
-                            <th scope="col">Example</th>
                         </tr>
                     </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">tag</th>
+                            <td>Include the tag</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">-tag</th>
+                            <td>Exclude the tag</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">regex~tag_regex~</th>
+                            <td>
+                                Search tags by a regular expression.
+                                Note, that the regular expression <b>cannot</b> contant
+                                a tilde (that would end the tag)
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </form>
