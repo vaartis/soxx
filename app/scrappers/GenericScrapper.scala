@@ -91,7 +91,7 @@ abstract class GenericScrapper ()
 
   protected final var materializer: Option[ActorMaterializer] = None
 
-  protected final def startIndexing(fromPage: Int, toPage: Option[Int] = None): Unit = {
+  protected final def startIndexing(fromPage: Int, toPage: Option[Int]): Unit = {
     if (materializer == None) {
       implicit val actualMaterializer = ActorMaterializer()(context)
       materializer = Some(actualMaterializer)
@@ -107,10 +107,9 @@ abstract class GenericScrapper ()
           }
         }
         .map { pagesCount =>
-          Source(1 to (pagesCount + 1))
+          Source(fromPage to (pagesCount + 1))
             .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
             .runForeach { case (scrapperImages, currentPage) =>
-              import org.mongodb.scala.model.Updates._
               import org.mongodb.scala.model.Filters._
 
               val operations = scrapperImages
