@@ -20,6 +20,7 @@
 </template>
 
 <script>
+ import urlListener from "url-listener";
  import _ from "lodash";
  import URI from "urijs";
 
@@ -36,24 +37,28 @@
      methods: {
          favicon(imgFrom) {
              return this.imboard_info[imgFrom].favicon;
+         },
+
+         updateImagesFromQueryString() {
+             let queryUrl = new URI(window.location);
+             let imagesUrl = new URI(queryUrl.origin() + "/api/v1/images");
+
+             if (queryUrl.hasQuery("query")) {
+                 let searchString = queryUrl.query(true)["query"];
+                 imagesUrl.addQuery("query", searchString);
+             }
+
+             fetch(imagesUrl)
+                 .then(resp => {
+                     resp.json().then(imgs => {
+                         this.images = imgs.result;
+                     })
+                 })
          }
      },
 
      mounted() {
          let queryUrl = new URI(window.location);
-         let imagesUrl = new URI(queryUrl.origin() + "/api/v1/images");
-
-         if (queryUrl.hasQuery("query")) {
-             let searchString = queryUrl.query(true)["query"];
-             imagesUrl.addQuery("query", searchString);
-         }
-
-         fetch(imagesUrl)
-             .then(resp => {
-                 resp.json().then(imgs => {
-                     this.images = imgs.result;
-                 })
-             })
 
          fetch("/api/v1/imboard_info")
              .then(resp => {
@@ -63,7 +68,12 @@
                      })
                  })
              })
-     }
+             .then(this.updateImagesFromQueryString)
+
+         urlListener(event => {
+             this.updateImagesFromQueryString();
+         });
+     },
  }
 </script>
 

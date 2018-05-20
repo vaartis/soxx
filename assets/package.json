@@ -11,6 +11,7 @@
         "lodash": "^4.17.10",
         "popper.js": "^1.14.3",
         "urijs": "^1.19.1",
+        "url-listener": "^2.0.0",
         "vue": "^2.5.16",
         "vue-loader": "^15.1.0",
         "vue-template-compiler": "^2.5.16"

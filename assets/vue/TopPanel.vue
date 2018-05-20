@@ -5,9 +5,11 @@
             <div class="navbar-nav">
             </div>
         </div>
-        <form class="form-inline w-25">
-            <input class="w-50" type="search" placeholder="Search..." v-model="searchString" />
-            <input class="btn btn-primary form-control mx-2" type="button" value="Search" />
+        <form class="form-inline w-25" v-on:submit.prevent="doSearch">
+            <input class="w-50" type="search" placeholder="Search..."
+                   v-model="searchString" />
+            <input class="btn btn-primary form-control mx-2" type="submit"
+                   value="Search" />
             <input class="btn btn-light form-control mx-2"
                    type="button" value="Help"
                    data-toggle="collapse" data-target="#search-help-content" />
@@ -42,6 +44,15 @@
          let queryUrl = new URI(window.location);
          if (queryUrl.hasQuery("query"))
              this.searchString = queryUrl.query(true)["query"];
+     },
+
+     methods: {
+         doSearch() {
+             let queryUrl = new URI(window.location);
+             queryUrl.setQuery("query", this.searchString);
+
+             window.history.pushState({query: this.searchString}, '', queryUrl.toString());
+         }
      }
  }
 </script>
