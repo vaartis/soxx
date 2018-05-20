@@ -4,7 +4,8 @@ const VueLoaderPlugin = require('vue-loader/lib/plugin')
 module.exports = {
     devtool: "source-map",
     entry: {
-        index: "./js/index.js"
+        index: "./js/index.js",
+        bootstrap: "./js/bootstrap.js"
     },
 
     resolve: {
@@ -15,7 +16,8 @@ module.exports = {
 
     output: {
         filename: "[name].js",
-        path: path.resolve(__dirname, "../public/js")
+        path: path.resolve(__dirname, "../public/js"),
+        publicPath: "/assets/js/"
     },
 
     module: {
