@@ -48,6 +48,13 @@ class ScrapperSupervisor @Inject()
     context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
     context.actorOf(Props(new FurrybooruScrapper), "furrybooru-scrapper")
 
+    // Moebooru-like
+    // They mostly don't give images out to links,
+    // so they need to be downloaded
+    context.actorOf(Props(new KonachanScrapper), "konachan-scrapper")
+    context.actorOf(Props(new YandereScrapper), "yandere-scrapper")
+    // context.actorOf(Props(new SakugabooruScrapper), "sakugabooru-scrapper")
+
     lifecycle.addStopHook { () =>
       Future { context.stop(self) }
     }
