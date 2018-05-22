@@ -9,6 +9,7 @@ import play.api.libs.json._
 import akka.actor._
 import play.api.Logger
 import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.util._
 
 import soxx.mongowrapper._
 import org.mongodb.scala._
@@ -106,6 +107,8 @@ abstract class GenericScrapper ()
           }
         }
         .map { pagesCount =>
+          logger.info(f"Total page count: ${pagesCount}")
+
           Source(fromPage to (pagesCount + 1))
             .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
             .runForeach { case (scrapperImages, currentPage) =>
@@ -145,6 +148,11 @@ abstract class GenericScrapper ()
                   (_: BulkWriteResult) => logger.info(s"Finished page ${currentPage}")
                 )
             }
+        }
+        .andThen { case Success(f) =>
+          Await.result(f, Duration.Inf)
+
+          logger.info("Finished scrapping")
         }
     }
   }
