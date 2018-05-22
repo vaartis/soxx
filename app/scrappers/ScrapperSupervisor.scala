@@ -42,6 +42,9 @@ class ScrapperSupervisor @Inject()
       )
 
     // Start scrapper actors
+    // FIXME: make this better
+
+    // Old-danbooru-like
     context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
     context.actorOf(Props(new FurrybooruScrapper), "furrybooru-scrapper")
 
