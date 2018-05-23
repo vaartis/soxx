@@ -1,18 +1,16 @@
 <template>
-    <div>
-        <div class="card-columns">
-            <div class="card" v-for="image in images" v-bind:key="image._id">
-                <!-- Hacky but works! Looks beter then object-fit too  -->
-                <!-- Just using the first "from" may not be the best idea -->
-                <div class="card-img-top img-card"
-                     v-bind:style="`background-image: url(${image.from[0].image})`" />
-                <div class="card-body">
-                    <div class="card-header">
-                        <a v-for="from in image.from" v-bind:key="from.name"
-                           v-bind:href="from.post" v-bind:title="from.name">
-                            <img v-bind:src="favicon(from.name)" />
-                        </a>
-                    </div>
+    <div class="card-columns">
+        <div class="card" v-for="image in images" v-bind:key="image._id">
+            <!-- Hacky but works! Looks beter then object-fit too  -->
+            <!-- Just using the first "from" may not be the best idea -->
+            <div class="card-img-top img-card"
+                 v-bind:style="`background-image: url(${image.from[0].image})`" />
+            <div class="card-body">
+                <div class="card-header">
+                    <a v-for="from in image.from" v-bind:key="from.name"
+                       v-bind:href="from.post" v-bind:title="from.name">
+                        <img v-bind:src="favicon(from.name)" />
+                    </a>
                 </div>
             </div>
         </div>
