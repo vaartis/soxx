@@ -114,6 +114,6 @@ class SakugabooruScrapper ()
     ec: ExecutionContext
   ) extends MoebooruScrapper {
 
-  override val baseUrl = "https://www.sakugabooru.com/"
+  override val baseUrl = "https://www.sakugabooru.com"
   override val name = "sakugabooru"
 }
