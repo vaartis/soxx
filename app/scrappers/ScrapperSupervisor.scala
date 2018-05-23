@@ -55,6 +55,9 @@ class ScrapperSupervisor @Inject()
     context.actorOf(Props(new YandereScrapper), "yandere-scrapper")
     // context.actorOf(Props(new SakugabooruScrapper), "sakugabooru-scrapper")
 
+    // New-danbooru-like
+    context.actorOf(Props(new DanbooruScrapper), "danbooru-scrapper")
+
     lifecycle.addStopHook { () =>
       Future { context.stop(self) }
     }
