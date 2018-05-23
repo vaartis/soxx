@@ -87,7 +87,7 @@ abstract class GenericScrapper ()
     * This function should set the [[Image.from]] field to a [[scala.collection.Seq]] with a single element:
     * information about this imageboard.
     */
-  def scrapperImageToImage(img: ScrapperImage): Image
+  def scrapperImageToImage(img: ScrapperImage): Option[Image]
 
   protected final var materializer: Option[ActorMaterializer] = None
 
@@ -116,6 +116,7 @@ abstract class GenericScrapper ()
 
               val operations = scrapperImages
                 .map(scrapperImageToImage)
+                .collect { case Some(i) => i } // Filter out all None's and return images
                 .map { img =>
                   // If it's a new picture
                   if (Await.result(imageCollection.find(equal("md5", img.md5)).toFuture(), 5 seconds).isEmpty) {

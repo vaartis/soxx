@@ -56,25 +56,27 @@ abstract class OldDanbooruScrapper ()
       .get()
       .map { res => (res.json.as[Seq[OldDanbooruImage]], currentPage) }
 
-  override def scrapperImageToImage(img: OldDanbooruImage): Image =
-    Image(
-      height = img.height,
-      width = img.width,
-      tags = img.tags.split(" ").toSeq,
-      md5 = img.hash,
-      from = Seq(
-        From(
-          id = img.id,
-          name = name,
-          imageName = img.image,
-          score = img.score,
-          post = f"${baseUrl}/index.php?page=post&s=view&id=${img.id}",
-          image = f"${baseUrl}/images/${img.directory}/${img.image}",
-          thumbnail = f"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.image}"
-        )
-      ),
-      extension = img.image.substring(img.image.lastIndexOf('.')),
-      metadataOnly = true
+  override def scrapperImageToImage(img: OldDanbooruImage): Option[Image] =
+    Some(
+      Image(
+        height = img.height,
+        width = img.width,
+        tags = img.tags.split(" ").toSeq,
+        md5 = img.hash,
+        from = Seq(
+          From(
+            id = img.id,
+            name = name,
+            imageName = img.image,
+            score = img.score,
+            post = f"${baseUrl}/index.php?page=post&s=view&id=${img.id}",
+            image = f"${baseUrl}/images/${img.directory}/${img.image}",
+            thumbnail = f"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.image}"
+          )
+        ),
+        extension = img.image.substring(img.image.lastIndexOf('.')),
+        metadataOnly = true
+      )
     )
 
 }

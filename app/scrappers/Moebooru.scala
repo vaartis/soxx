@@ -55,31 +55,33 @@ abstract class MoebooruScrapper ()
       .get()
       .map { res => (res.json.as[Seq[MoebooruImage]], currentPage) }
 
-  override def scrapperImageToImage(img: MoebooruImage): Image = {
+  override def scrapperImageToImage(img: MoebooruImage): Option[Image] = {
     import java.net.URI
     import java.nio.file.Paths
 
     // getPath is important here, because without it Paths.get hangs
     val fileName = Paths.get(new URI(img.file_url).getPath).getFileName.toString
 
-    Image(
-      height = img.height,
-      width = img.width,
-      tags = img.tags.split(" ").toSeq,
-      md5 = img.md5,
-      from = Seq(
-        From(
-          id = img.id,
-          name = name,
-          imageName = fileName,
-          score = img.score,
-          post = f"${baseUrl}/post/show/${img.id}",
-          image = img.file_url,
-          thumbnail = img.preview_url
-        )
-      ),
-      extension = fileName.substring(fileName.lastIndexOf('.')),
-      metadataOnly = true
+    Some(
+      Image(
+        height = img.height,
+        width = img.width,
+        tags = img.tags.split(" ").toSeq,
+        md5 = img.md5,
+        from = Seq(
+          From(
+            id = img.id,
+            name = name,
+            imageName = fileName,
+            score = img.score,
+            post = f"${baseUrl}/post/show/${img.id}",
+            image = img.file_url,
+            thumbnail = img.preview_url
+          )
+        ),
+        extension = fileName.substring(fileName.lastIndexOf('.')),
+        metadataOnly = true
+      )
     )
   }
 }
