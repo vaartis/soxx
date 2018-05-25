@@ -18,32 +18,7 @@ class SoxxController @Inject()(
   system: ActorSystem
 )(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
-  implicit val actorResolveTimeout: Timeout = 5 seconds
-
-  val scrapperSupervisor = Await.result(
-    system
-      .actorSelection(system / "scrapper-supervisor")
-      .resolveOne(),
-    Duration.Inf
-  )
-
-
   def index() = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.index())
-  }
-
-  def stop() = Action { implicit request: Request[AnyContent] =>
-    system
-      .actorSelection(scrapperSupervisor.path / "safebooru-scrapper")
-      .resolveOne()
-      .recover { case e => println(e); throw e }
-      .andThen {
-        case Success(actRef) =>
-          actRef ! StopIndexing
-      }
-
-    Ok("OK");
-
-    // Ok(views.html.index())
   }
 }

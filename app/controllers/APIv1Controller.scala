@@ -4,9 +4,11 @@ import scala.language.postfixOps
 
 import javax.inject._
 import scala.concurrent._
+import scala.util._
 import scala.concurrent.duration._
 
 import akka.actor._
+import akka.util._
 import play.api.mvc._
 import play.api.libs.json._
 import org.mongodb.scala._
@@ -23,6 +25,15 @@ class APIv1Controller @Inject()(
 )(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
   val searchQueryParser = new QueryParser
+
+  implicit val actorResolveTimeout: Timeout = 5 seconds
+
+  val scrapperSupervisor = Await.result(
+    system
+      .actorSelection(system / "scrapper-supervisor")
+      .resolveOne(),
+    Duration.Inf
+  )
 
   def imboard_info(name: Option[String]) = Action { implicit request: Request[AnyContent] =>
     val collection = mongo.db
@@ -96,5 +107,20 @@ class APIv1Controller @Inject()(
             )
           )
     }
+  }
+
+  def test_index() = Action { implicit request: Request[AnyContent] =>
+    system
+      .actorSelection(scrapperSupervisor.path / "safebooru-scrapper")
+      .resolveOne()
+      .recover { case e => println(e); throw e }
+      .andThen {
+        case Success(actRef) =>
+          actRef ! StartIndexing(fromPage = 1)
+      }
+
+    Ok("OK");
+
+    // Ok(views.html.index())
   }
 }

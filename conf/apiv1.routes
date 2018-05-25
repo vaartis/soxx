@@ -3,3 +3,5 @@ GET     /images          controllers.apiv1.APIv1Controller.images(query: Option[
 
 # Imageboard info
 GET     /imboard_info    controllers.apiv1.APIv1Controller.imboard_info(name: Option[String] = None)
+
+GET     /test_index      controllers.apiv1.APIv1Controller.test_index
