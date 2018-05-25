@@ -1,7 +1,10 @@
 package soxx.scrappers
 
+import java.util.Date
+
 import org.bson.types.ObjectId
 import play.api.libs.json._
+import play.api.libs.json.Writes.dateWrites
 
 case class Image(
   height: Int,
@@ -13,16 +16,20 @@ case class Image(
 
   metadataOnly: Boolean,
 
-  indexedOn: java.util.Date = new java.util.Date(),
+  indexedOn: Date = new Date(),
   _id: ObjectId = new ObjectId() // Hack to make it deserialize
 )
 
 object Image {
-  // Hack!
+  // Hacks here. Serialization doesn't work on these things out of the box.
+  // Date has to be overrided because of the MongoDB date formatting
+
   implicit val oidFormat = new Format[ObjectId] {
     override def reads(json: JsValue) = JsSuccess(new ObjectId(json.as[String]))
     override def writes(o: ObjectId) = JsString(o.toString())
   }
+
+  implicit val implDateWrites = dateWrites("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
 
   implicit val imageFormat = Json.format[Image]
 }
