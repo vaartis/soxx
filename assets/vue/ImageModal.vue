@@ -46,7 +46,9 @@
                             </tr>
                         </tbody>
                     </table>
-                    <img class="img-fluid" v-bind:src="image.from[0].image" />
+                    <a v-bind:href="image.from[0].image">
+                        <img class="img-fluid" v-bind:src="image.from[0].image" />
+                    </a>
                 </div>
             </div>
         </div>
