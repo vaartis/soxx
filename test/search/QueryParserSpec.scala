@@ -43,4 +43,12 @@ class QueryParserSpec extends FlatSpec with Matchers with Inside {
         matched.regex shouldEqual "\\d"
     }
   }
+
+  it should "return an empty list when there are no tags" in {
+    import parser.Success
+
+    inside(parser.parseQuery("")) { case Success(result, _) =>
+      result.length shouldEqual 0
+    }
+  }
 }

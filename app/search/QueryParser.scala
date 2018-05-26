@@ -29,7 +29,7 @@ class QueryParser extends RegexParsers {
     RegexTag(new Regex(x))
   }
 
-  def theQueryParser = (regexTag | excludeTag | fullTag)+
+  def theQueryParser = (regexTag | excludeTag | fullTag)*
 
   def parseQuery(theQuery: String) = parse(theQueryParser, theQuery)
 }
