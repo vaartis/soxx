@@ -20,10 +20,9 @@ case class RegexTag(value: Regex) extends QueryTag
 class QueryParser extends RegexParsers {
   override def skipWhitespace = true
 
-  def fullTag: Parser[QueryTag] = """\w+""".r ^^ { x => FullTag(x.toString) }
+  def fullTag: Parser[FullTag] = """\w+""".r ^^ { x => FullTag(x.toString) }
   def excludeTag: Parser[QueryTag] = '-' ~ fullTag ^^ {
     case _ ~ FullTag(v) => ExcludeTag(v)
-    case _ ~ _ => ??? // Supress warnings
   }
 
   def regexTag: Parser[QueryTag] = "regex~" ~> "[^~]+".r <~ "~"  ^^ { case x =>
