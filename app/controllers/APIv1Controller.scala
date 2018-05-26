@@ -51,62 +51,59 @@ class APIv1Controller @Inject()(
     )
   }
 
-  def images(query: Option[String], offset: Int, _limit: Int) = Action { implicit request: Request[AnyContent] =>
+  def images(query: Option[String], offset: Int, _limit: Int) = Action.async { implicit request: Request[AnyContent] =>
     // Hard-limit "limit" to 250
     val limit: Int = if (_limit > 250) { 250 } else { _limit }
 
     val imageCollection = mongo.db.getCollection[Image]("images")
 
-    if (query.nonEmpty) {
-      import searchQueryParser.{Success, Failure, Error}
-      import org.mongodb.scala.model.Filters._
+    query
+      .map { query =>
+        // The left value is the error that might've happened while parsing
+        // The right value is the parsed query
 
-      searchQueryParser.parseQuery(query.get) match {
-        case Success(tagList, _) =>
-          val tagFilters = tagList.map {
-            case FullTag(tag) =>
-              Document("tags" -> Document("$in" -> Seq(tag)))
-            case ExcludeTag(tag) =>
-              Document("tags" -> Document("$not" -> Document("$in" -> Seq(tag))))
-            case RegexTag(tag) =>
-              Document("tags" -> Document("$regex" -> tag.regex, "$options" -> "i"))
-          }
+        import searchQueryParser.{Success, NoSuccess}
 
-          Ok(
-            Json.toJson(
-              Json.obj(
-                "ok" -> true,
-                "result" -> Json.toJson(Await.result(
-                  imageCollection
-                    .find(and(tagFilters:_*))
-                    .skip(offset)
-                    .limit(limit)
-                    .sort(Document("_id" -> -1))
-                    .toFuture,
-                  Duration.Inf
-                )
-              )),
+        searchQueryParser.parseQuery(query) match {
+          case Success(tagList, _) =>
+            Right(
+              tagList.map {
+                case FullTag(tag) =>
+                  Document("tags" -> Document("$in" -> Seq(tag)))
+                case ExcludeTag(tag) =>
+                  Document("tags" -> Document("$not" -> Document("$in" -> Seq(tag))))
+                case RegexTag(tag) =>
+                  Document("tags" -> Document("$regex" -> tag.regex, "$options" -> "i"))
+              }
             )
-          )
+          case NoSuccess(errorString, _) =>
+            Left(errorString)
+        }
       }
-    } else {
-          Ok(
-            Json.toJson(
-              Json.obj(
-                "ok" -> true,
-                "result" -> Json.toJson(Await.result(
-                  imageCollection
-                    .find()
-                    .skip(offset)
-                    .limit(limit)
-                    .sort(Document("_id" -> -1))
-                    .toFuture,
-                  Duration.Inf
-                )
-              )),
-            )
+      .getOrElse(Right(List())) // Use an empty list if there is no query
+      .map { searchQuery =>
+        import org.mongodb.scala.model.Filters._
+
+        // Actually get the images
+        imageCollection
+          .find(
+            // Just use an empty document if there's no filters
+            if (searchQuery.isEmpty) { Document() } else { and(searchQuery:_*) }
           )
-    }
+          .skip(offset)
+          .limit(limit)
+          .sort(Document("_id" -> -1))
+          .toFuture
+          .map { images =>
+            // Make it an actual result and return the future
+
+            Ok(Json.toJson(Json.obj("ok" -> true, "result" -> images)))
+          }
+      } match {
+        case Right(result) => result
+        case Left(errorString) =>
+          Future { Ok(Json.toJson(Json.obj("ok" -> false, "error" -> errorString))) }
+      }
   }
 
   def test_index() = Action { implicit request: Request[AnyContent] =>
