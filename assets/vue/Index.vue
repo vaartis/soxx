@@ -3,7 +3,8 @@
         <div class="card" v-for="image in images" v-bind:key="image._id">
             <!-- Hacky but works! Looks beter then object-fit too  -->
             <!-- Just using the first "from" may not be the best idea -->
-            <a href="#" data-toggle="modal" v-bind:data-target="`#image-modal-${image._id}`">
+            <a v-bind:href="`/image/${image._id}`"
+               data-toggle="modal" v-bind:data-target="`#image-modal-${image._id}`">
                 <div class="card-img-top img-card"
                      v-bind:style="`background-image: url(${image.from[0].image})`">
                 </div>
@@ -26,7 +27,7 @@
  import _ from "lodash";
  import URI from "urijs";
 
- import ImageModal from "./ImageModal.vue"
+ import ImageModal from "./ImageModal.vue";
 
  Vue.config.productionTip = false
 

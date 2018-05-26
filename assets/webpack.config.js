@@ -6,8 +6,10 @@ module.exports = {
     devtool: "source-map",
     entry: {
         index: "./js/index.js",
+        image: "./js/image.js",
+
         top_panel: "./js/top_panel.js",
-        bootstrap: "./js/bootstrap.js"
+        bootstrap: "./js/bootstrap.js",
     },
 
     resolve: {

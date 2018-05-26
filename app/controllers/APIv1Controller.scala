@@ -51,6 +51,19 @@ class APIv1Controller @Inject()(
     )
   }
 
+  def image(id: String) = Action.async { implicit request: Request[AnyContent] =>
+    import org.mongodb.scala.model.Filters.equal
+    import org.bson.types.ObjectId
+
+    mongo.db.getCollection[Image]("images")
+      .find(equal("_id", new ObjectId(id)))
+      .toFuture
+      .map {
+        case Seq(theImage) => Ok(Json.toJson(Json.obj("ok" -> true, "result" -> theImage)))
+        case Seq() => Ok(Json.toJson(Json.obj("ok" -> false, "error" -> f"The image ${id} doesn't exist")))
+      }
+  }
+
   def images(query: Option[String], offset: Int, _limit: Int) = Action.async { implicit request: Request[AnyContent] =>
     // Hard-limit "limit" to 250
     val limit: Int = if (_limit > 250) { 250 } else { _limit }
