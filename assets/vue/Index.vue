@@ -3,8 +3,12 @@
         <div class="card" v-for="image in images" v-bind:key="image._id">
             <!-- Hacky but works! Looks beter then object-fit too  -->
             <!-- Just using the first "from" may not be the best idea -->
-            <div class="card-img-top img-card"
-                 v-bind:style="`background-image: url(${image.from[0].image})`" />
+            <a href="#" data-toggle="modal" v-bind:data-target="`#image-modal-${image._id}`">
+                <div class="card-img-top img-card"
+                     v-bind:style="`background-image: url(${image.from[0].image})`">
+                </div>
+            </a>
+            <ImageModal v-bind:image="image" />
             <div class="card-body">
                 <div class="card-header">
                     <a v-for="from in image.from" v-bind:key="from.name"
@@ -21,6 +25,8 @@
  import urlListener from "url-listener";
  import _ from "lodash";
  import URI from "urijs";
+
+ import ImageModal from "./ImageModal.vue"
 
  Vue.config.productionTip = false
 
@@ -72,12 +78,15 @@
              this.updateImagesFromQueryString();
          });
      },
+
+     components: { ImageModal }
  }
 </script>
 
 <style>
  .card-columns {
      column-count: 5;
+     max-width: 100%;
  }
 
  .img-card {
