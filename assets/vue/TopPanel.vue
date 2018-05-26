@@ -47,6 +47,7 @@
 
 <script>
  import URI from "urijs";
+ import urlListener from "url-listener";
 
  Vue.config.productionTip = false
 
@@ -58,12 +59,18 @@
      },
 
      mounted() {
-         let queryUrl = new URI(window.location);
-         if (queryUrl.hasQuery("query"))
-             this.searchString = queryUrl.query(true)["query"];
+         this.updateSearchString();
+
+         urlListener(event => this.updateSearchString());
      },
 
      methods: {
+         updateSearchString() {
+             let queryUrl = new URI(window.location);
+             if (queryUrl.hasQuery("query"))
+                 this.searchString = queryUrl.query(true)["query"];
+         },
+
          doSearch() {
              let queryUrl = new URI(window.location);
              queryUrl.setQuery("query", this.searchString);
