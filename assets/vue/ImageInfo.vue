@@ -18,7 +18,7 @@
                            v-on:click.prevent="searchTag(tag)"
                            data-dismiss="modal"
                            data-target="`#image-modal-${this.image._id}`">
-                            {{ tag }}
+                            {{ unescapeTag(tag) }}
                         </a>
                     </td>
                 </tr>
@@ -45,6 +45,7 @@
 <script>
  import URI from "urijs";
  import moment from "moment";
+ import he from "he";
 
  export default {
      props: {
@@ -93,6 +94,10 @@
              } else {
                  window.history.pushState({query: tag}, '', this.constructLinkFromTag(tag));
              }
+         },
+
+         unescapeTag(tag) {
+             return he.decode(tag);
          }
      }
  }
