@@ -51,4 +51,16 @@ class QueryParserSpec extends FlatSpec with Matchers with Inside {
       result.length shouldEqual 0
     }
   }
+
+  it should "recognize symbols in tags" in {
+    import parser.Success
+
+    inside(parser.parseQuery("some_body~ once_told_me_! -the_world_is_(gonna) regex~roll-me...~")) {
+      case Success(List(FullTag(fst), FullTag(snd), ExcludeTag(excl), RegexTag(smb)), _) =>
+        fst shouldEqual "some_body~"
+        snd shouldEqual "once_told_me_!"
+        excl shouldEqual "the_world_is_(gonna)"
+        smb.regex shouldEqual "roll-me..."
+    }
+  }
 }

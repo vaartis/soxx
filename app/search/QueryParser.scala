@@ -14,15 +14,15 @@ case class RegexTag(value: Regex) extends QueryTag
   *
   * Parses search queries separated by spaces, it recognizes full tags,
   * tag excludes and regex tags with a special syntax regex~regex goes here!~.
-  * Note the the previous makes tildes otherwise unusable in searching. I suppose this
+  * Note the the previous makes tildes otherwise unusable in regular expressions. I suppose this
   * issue will be addressed in the future.
   */
 class QueryParser extends RegexParsers {
   override def skipWhitespace = true
 
-  def fullTag: Parser[FullTag] = """\w+""".r ^^ { x => FullTag(x.toString) }
-  def excludeTag: Parser[QueryTag] = '-' ~ fullTag ^^ {
-    case _ ~ FullTag(v) => ExcludeTag(v)
+  def fullTag: Parser[FullTag] = """[^\s\-]+""".r ^^ { x => FullTag(x.toString) }
+  def excludeTag: Parser[QueryTag] = "-" ~> fullTag ^^ {
+    case FullTag(v) => ExcludeTag(v)
   }
 
   def regexTag: Parser[QueryTag] = "regex~" ~> "[^~]+".r <~ "~"  ^^ { case x =>
