@@ -1,6 +1,6 @@
 <template>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">Soxx</a>
+        <a class="navbar-brand" href="/">Soxx</a>
         <div class="collapse navbar-collapse">
             <div class="navbar-nav">
             </div>
