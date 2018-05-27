@@ -76,7 +76,14 @@
              let queryUrl = new URI(window.location);
              queryUrl.setQuery("query", he.encode(this.searchString, { useNamedReferences: true }));
 
-             window.history.pushState({query: this.searchString}, '', queryUrl.toString());
+             // If we are not on the search page, use it's address
+             if (queryUrl.path() != "/" && queryUrl.path() != "/index") {
+                 queryUrl.path("/index");
+
+                 window.location.href = queryUrl.toString();
+             } else {
+                 window.history.pushState({query: this.searchString}, '', queryUrl.toString());
+             }
          }
      }
  }
