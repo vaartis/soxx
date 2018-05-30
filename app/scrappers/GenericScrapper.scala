@@ -22,7 +22,7 @@ import com.mongodb.client.result.UpdateResult
  * You need to override some things and you get a functional scrapper
  * for most of the imageboards.
  */
-abstract class GenericScrapper ()
+abstract class GenericScrapper
   (
     implicit mongo: Mongo,
     ec: ExecutionContext

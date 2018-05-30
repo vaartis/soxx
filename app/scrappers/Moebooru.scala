@@ -7,7 +7,7 @@ import play.api.libs.json._
 
 import soxx.mongowrapper._
 
-abstract class MoebooruScrapper ()
+abstract class MoebooruScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,
@@ -86,7 +86,7 @@ abstract class MoebooruScrapper ()
   }
 }
 
-class KonachanScrapper ()
+class KonachanScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,
@@ -97,7 +97,7 @@ class KonachanScrapper ()
   override val name = "konachan"
 }
 
-class YandereScrapper ()
+class YandereScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,
@@ -109,7 +109,7 @@ class YandereScrapper ()
 }
 
 /* This one is mostly videos but it's still moebooru */
-class SakugabooruScrapper ()
+class SakugabooruScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,

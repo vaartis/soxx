@@ -42,21 +42,36 @@ class ScrapperSupervisor @Inject()
       )
 
     // Start scrapper actors
-    // FIXME: make this better
+    Seq(
+      // Old-danbooru-like
+      (classOf[SafebooruScrapper], "safebooru-scrapper"),
+      (classOf[FurrybooruScrapper], "furrybooru-scrapper"),
 
-    // Old-danbooru-like
-    context.actorOf(Props(new SafebooruScrapper), "safebooru-scrapper")
-    context.actorOf(Props(new FurrybooruScrapper), "furrybooru-scrapper")
+      // Moebooru-like
+      // They mostly don't give images out to links,
+      // so they need to be downloaded
+      (classOf[KonachanScrapper], "konachan-scrapper"),
+      (classOf[YandereScrapper], "yandere-scrapper"),
+      // (classOf[SakugabooruScrapper], "sakugabooru-scrapper"),
 
-    // Moebooru-like
-    // They mostly don't give images out to links,
-    // so they need to be downloaded
-    context.actorOf(Props(new KonachanScrapper), "konachan-scrapper")
-    context.actorOf(Props(new YandereScrapper), "yandere-scrapper")
-    // context.actorOf(Props(new SakugabooruScrapper), "sakugabooru-scrapper")
+      // New-danbooru-like
+      (classOf[DanbooruScrapper], "danbooru-scrapper")
+    ).foreach { case (scrapperClass, name) =>
+        context.actorOf(
+          Props(
+            scrapperClass,
+            implicitly[WSClient],
+            implicitly[Mongo],
+            implicitly[ExecutionContext]
+          ),
+          name
+        )
 
-    // New-danbooru-like
-    context.actorOf(Props(new DanbooruScrapper), "danbooru-scrapper")
+        // Names really should be moved into something that is statically accessible
+        // and can be made virtual. This is possible by implementing a trait
+        // and creating companion objects for each class, but that's too
+        // much code for too little benefit
+    }
 
     lifecycle.addStopHook { () =>
       Future { context.stop(self) }

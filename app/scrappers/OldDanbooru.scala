@@ -7,7 +7,7 @@ import play.api.libs.json._
 
 import soxx.mongowrapper._
 
-abstract class OldDanbooruScrapper ()
+abstract class OldDanbooruScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,
@@ -81,7 +81,7 @@ abstract class OldDanbooruScrapper ()
 
 }
 
-class SafebooruScrapper ()
+class SafebooruScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,
@@ -92,7 +92,7 @@ class SafebooruScrapper ()
   override val name = "safebooru"
 }
 
-class FurrybooruScrapper ()
+class FurrybooruScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,

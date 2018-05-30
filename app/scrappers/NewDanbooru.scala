@@ -7,7 +7,7 @@ import play.api.libs.json._
 
 import soxx.mongowrapper._
 
-abstract class NewDanbooruScrapper ()
+abstract class NewDanbooruScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,
@@ -91,7 +91,7 @@ abstract class NewDanbooruScrapper ()
 }
 
 // Errors out on 1000th+ page
-class DanbooruScrapper ()
+class DanbooruScrapper
   (
     implicit ws: WSClient,
     mongo: Mongo,
