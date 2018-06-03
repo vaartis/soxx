@@ -1,5 +1,6 @@
 package controllers.apiv1 // Hack to make it recompile correctly
 
+import akka.stream.Materializer
 import scala.language.postfixOps
 
 import javax.inject._
@@ -18,11 +19,16 @@ import soxx.search._
 import soxx.scrappers._
 
 @Singleton
-class APIv1Controller @Inject()(
-  cc: ControllerComponents,
-  system: ActorSystem,
-  mongo: Mongo
-)(implicit ec: ExecutionContext) extends AbstractController(cc) {
+class APIv1Controller @Inject()
+  (
+    cc: ControllerComponents
+  )
+  (
+    implicit ec: ExecutionContext,
+    mat: Materializer,
+    system: ActorSystem,
+    mongo: Mongo
+  ) extends AbstractController(cc) {
 
   val searchQueryParser = new QueryParser
 
@@ -132,5 +138,14 @@ class APIv1Controller @Inject()(
     Ok("OK");
 
     // Ok(views.html.index())
+  }
+
+  def admin_panel_socket = WebSocket.accept[JsValue, JsValue] { req =>
+    import play.api.libs.streams._
+    import soxx.admin._
+
+    ActorFlow.actorRef { out =>
+      AdminPanelActor.props(out)
+    }
   }
 }

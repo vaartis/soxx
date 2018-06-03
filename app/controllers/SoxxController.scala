@@ -25,4 +25,9 @@ class SoxxController @Inject()(
   def image(_id: String) = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.image())
   }
+
+  def admin = Action { implicit request: Request[AnyContent] =>
+    Ok(views.html.admin())
+  }
+
 }

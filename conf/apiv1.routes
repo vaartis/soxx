@@ -8,3 +8,5 @@ GET     /image/:id       controllers.apiv1.APIv1Controller.image(id: String)
 GET     /imboard_info    controllers.apiv1.APIv1Controller.imboard_info(name: Option[String] = None)
 
 GET     /test_index      controllers.apiv1.APIv1Controller.test_index
+
+GET     /admin_panel_socket controllers.apiv1.APIv1Controller.admin_panel_socket

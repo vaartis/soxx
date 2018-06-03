@@ -7,6 +7,7 @@ module.exports = {
     entry: {
         index: "./js/index.js",
         image: "./js/image.js",
+        admin: "./js/admin.js",
 
         top_panel: "./js/top_panel.js",
         bootstrap: "./js/bootstrap.js",

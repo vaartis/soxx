@@ -16,3 +16,7 @@ I will probably also set up some testing and that stuff where appropriate.
 
 The only outside dependencies are NodeJS and MongoDB, just installing them
 should be enough to get things running by just typing `sbt run`.
+
+## Notes
+
+In order for collection watching to work mongodb needs to be configured as a cluster.
