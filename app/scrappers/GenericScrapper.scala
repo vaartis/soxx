@@ -179,6 +179,9 @@ abstract class GenericScrapper
 
     case StopIndexing =>
       stopIndexing()
+
+    case IsIndexing =>
+      sender ! !materializer.isEmpty
   }
 
   override def preStart() {
