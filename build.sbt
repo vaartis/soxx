@@ -24,9 +24,11 @@ scalacOptions ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  guice,
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
   ws,
+
+  guice,
+
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.2.1",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0"
 )
