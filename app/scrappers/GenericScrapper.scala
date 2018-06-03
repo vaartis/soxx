@@ -2,19 +2,21 @@ package soxx.scrappers
 
 import java.util.Arrays
 import scala.concurrent.duration._
+import scala.util._
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import play.api.libs.json._
 import akka.actor._
 import play.api.Logger
-import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.util._
 
 import soxx.mongowrapper._
 import org.mongodb.scala._
 import org.mongodb.scala.model._
 import com.mongodb.client.result.UpdateResult
+import org.mongodb.scala.model.Updates._
+import org.mongodb.scala.model.Filters._
 
 /** A base for all scrappers.
  *
@@ -97,6 +99,7 @@ abstract class GenericScrapper
       materializer = Some(actualMaterializer)
 
       val imageCollection = mongo.db.getCollection[Image]("images")
+      val imboardInfoCollection = mongo.db.getCollection[BoardInfo]("imboard_info")
 
       getPageCount
         .map { pagesCount =>
@@ -109,11 +112,13 @@ abstract class GenericScrapper
         .map { pagesCount =>
           logger.info(f"Total page count: ${pagesCount}")
 
+          imboardInfoCollection
+            .updateOne(equal("_id", name), set("estimatePages", pagesCount))
+            .toFuture // Make it set the estimate and ignore the result
+
           Source(fromPage to (pagesCount + 1))
             .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
             .runForeach { case (scrapperImages, currentPage) =>
-              import org.mongodb.scala.model.Filters._
-
               val operations = scrapperImages
                 .map(scrapperImageToImage)
                 .collect { case Some(i) => i } // Filter out all None's and return images
@@ -122,8 +127,6 @@ abstract class GenericScrapper
                   if (Await.result(imageCollection.find(equal("md5", img.md5)).toFuture(), 5 seconds).isEmpty) {
                     InsertOneModel(img)
                   } else {
-                    import org.mongodb.scala.model.Updates._
-
                     UpdateOneModel(
                       equal("md5", img.md5),
                       combine(
@@ -145,6 +148,11 @@ abstract class GenericScrapper
 
               imageCollection
                 .bulkWrite(operations, BulkWriteOptions().ordered(false))
+                .andThen { case Success(_) =>
+                  imboardInfoCollection
+                    .updateOne(equal("_id", name), set("lastIndexedPage", currentPage))
+                    .toFuture() // Just ignore it
+                }
                 .subscribe(
                   (_: BulkWriteResult) => logger.info(s"Finished page ${currentPage}")
                 )
@@ -176,11 +184,14 @@ abstract class GenericScrapper
   override def preStart() {
     mongo.db
       .getCollection[BoardInfo]("imboard_info")
-      .replaceOne(
+      .updateOne(
         Document(
           "_id" -> name,
         ),
-        BoardInfo(name, favicon = f"${baseUrl}/${favicon}"),
+        combine(
+          set("_id", name),
+          set("favicon", f"${baseUrl}/${favicon}")
+        ),
         UpdateOptions().upsert(true)
       )
       .subscribe { (_: UpdateResult) =>
