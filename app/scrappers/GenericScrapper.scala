@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import scala.util._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
-import akka.stream.ActorMaterializer
+import akka.stream._
 import akka.stream.scaladsl.Source
 import play.api.libs.json._
 import akka.actor._
@@ -156,6 +156,9 @@ abstract class GenericScrapper
                 .subscribe(
                   (_: BulkWriteResult) => logger.info(s"Finished page ${currentPage}")
                 )
+            }
+            .recover {
+              case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
             }
         }
         .andThen { case Success(f) =>
