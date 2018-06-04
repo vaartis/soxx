@@ -125,21 +125,6 @@ class APIv1Controller @Inject()
       }
   }
 
-  def test_index() = Action { implicit request: Request[AnyContent] =>
-    system
-      .actorSelection(scrapperSupervisor.path / "safebooru-scrapper")
-      .resolveOne()
-      .recover { case e => println(e); throw e }
-      .andThen {
-        case Success(actRef) =>
-          actRef ! StartIndexing(fromPage = 1)
-      }
-
-    Ok("OK");
-
-    // Ok(views.html.index())
-  }
-
   def admin_panel_socket = WebSocket.accept[JsValue, JsValue] { req =>
     import play.api.libs.streams._
     import soxx.admin._
