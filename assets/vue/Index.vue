@@ -1,23 +1,33 @@
 <template>
-    <div class="card-columns">
-        <div class="card" v-for="image in images" v-bind:key="image._id">
-            <!-- Hacky but works! Looks beter then object-fit too  -->
-            <!-- Just using the first "from" may not be the best idea -->
-            <a v-bind:href="`/image/${image._id}`"
-               data-toggle="modal" v-bind:data-target="`#image-modal-${image._id}`">
-                <div class="card-img-top img-card"
-                     v-bind:style="`background-image: url(${image.from[0].image})`">
-                </div>
-            </a>
-            <ImageModal v-bind:image="image" />
-            <div class="card-body">
-                <div class="card-header">
-                    <a v-for="from in image.from" v-bind:key="from.name"
-                       v-bind:href="from.post" v-bind:title="from.name">
-                        <img v-bind:src="favicon(from.name)" />
-                    </a>
+    <div>
+        <div class="card-columns">
+            <div class="card" v-for="image in images" v-bind:key="image._id">
+                <!-- Hacky but works! Looks beter then object-fit too  -->
+                <!-- Just using the first "from" may not be the best idea -->
+                <a v-bind:href="`/image/${image._id}`"
+                   data-toggle="modal" v-bind:data-target="`#image-modal-${image._id}`">
+                    <div class="card-img-top img-card"
+                         v-bind:style="`background-image: url(${image.from[0].image})`">
+                    </div>
+                </a>
+                <ImageModal v-bind:image="image" />
+                <div class="card-body">
+                    <div class="card-header">
+                        <a v-for="from in image.from" v-bind:key="from.name"
+                           v-bind:href="from.post" v-bind:title="from.name">
+                            <img v-bind:src="favicon(from.name)" />
+                        </a>
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <div>
+            <ul class="pagination justify-content-center">
+                <li class="page-item" v-for="page in pages">
+                    <a class="page-link" v-bind:href="computePageUrl(page)" v-on:click.prevent="goToPage(page)"> {{ page }} </a>
+                </li>
+            </ul>
         </div>
     </div>
 </template>
@@ -35,7 +45,8 @@
      data() {
          return {
              imboard_info: {},
-             images: []
+             images: [],
+             pages: [] // Actually just page numbers since you kinda can't use lodash in templates(?)
          }
      },
 
@@ -53,12 +64,46 @@
                  imagesUrl.addQuery("query", searchString);
              }
 
+             let page = 1;
+             if (queryUrl.hasQuery("page")) {
+                 page = queryUrl.query(true)["page"];
+                 imagesUrl.addQuery("offset", page * 25); // The default image count is 25
+             }
+
              fetch(imagesUrl)
                  .then(resp => {
-                     resp.json().then(imgs => {
-                         this.images = imgs.result.images;
-                     })
+                     resp.json().then(r => {
+                         this.images = r.result.images;
+
+                         // Get a `range` of elements around the `index`
+                         function getAround(array, index, range) {
+                             var least = index - range - 1;
+                             least = (least < 0) ? 0 : least;
+                             return _.slice(array, least, least + (range * 2) + 1);
+                         }
+
+
+                         this.pages = getAround(
+                             _.range(1, Math.floor(r.result.imageCount / 25)), // FIXME: make page size configurable
+                             page,
+                             5
+                         );
+
+                         // Go to the top of the page
+                         window.scroll(0, 0);
+                     });
                  })
+         },
+
+         computePageUrl(page) {
+             let queryUrl = new URI(window.location);
+             queryUrl.setQuery("page", page);
+
+             return queryUrl.toString();
+         },
+
+         goToPage(page) {
+             window.history.pushState({page: page}, '', this.computePageUrl(page));
          }
      },
 
