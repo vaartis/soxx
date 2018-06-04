@@ -89,7 +89,7 @@
          },
 
          searchTag(tag) {
-             if (this.isADeicatedPage) {
+             if (this.isADedicatedPage) {
                  window.location.href = this.constructLinkFromTag(tag);
              } else {
                  window.history.pushState({query: tag}, '', this.constructLinkFromTag(tag));
