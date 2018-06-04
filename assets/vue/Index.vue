@@ -56,7 +56,7 @@
              fetch(imagesUrl)
                  .then(resp => {
                      resp.json().then(imgs => {
-                         this.images = imgs.result;
+                         this.images = imgs.result.images;
                      })
                  })
          }

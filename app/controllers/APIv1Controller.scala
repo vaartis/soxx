@@ -104,19 +104,32 @@ class APIv1Controller @Inject()
         import org.mongodb.scala.model.Filters._
 
         // Actually get the images
-        imageCollection
-          .find(
-            // Just use an empty document if there's no filters
-            if (searchQuery.isEmpty) { Document() } else { and(searchQuery:_*) }
-          )
-          .skip(offset)
-          .limit(limit)
-          .sort(Document("_id" -> -1))
-          .toFuture
-          .map { images =>
-            // Make it an actual result and return the future
+        // Just use an empty document if there's no filters
+        val mongoSearchQuery = if (searchQuery.isEmpty) { Document() } else { and(searchQuery:_*) }
 
-            Ok(Json.toJson(Json.obj("ok" -> true, "result" -> images)))
+        imageCollection
+          .count(mongoSearchQuery)
+          .toFuture()
+          .flatMap { foundImageCount =>
+            imageCollection.find(mongoSearchQuery)
+              .skip(offset)
+              .limit(limit)
+              .sort(Document("_id" -> -1))
+              .toFuture
+              .map { images =>
+                // Make it an actual result and return the future
+
+                Ok(
+                  Json.obj(
+                    "ok" -> true,
+                    "result" ->
+                      Json.obj(
+                        "images" -> images,
+                        "imageCount" -> foundImageCount
+                      )
+                  )
+                )
+              }
           }
       } match {
         case Right(result) => result
