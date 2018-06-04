@@ -5,6 +5,7 @@
 
 GET     /                           controllers.SoxxController.index
 GET     /index                      controllers.SoxxController.index
+GET     /images                     controllers.SoxxController.index
 
 GET     /image/:id                  controllers.SoxxController.image(id: String)
 
