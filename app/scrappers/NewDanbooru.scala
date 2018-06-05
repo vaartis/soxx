@@ -34,17 +34,15 @@ abstract class NewDanbooruScrapper
 
   override val apiAddition = "posts"
 
+  // New danbooru actually hard-limits to 200 images
+  // Old limited to 100
+  override val pageSize = 200
+
   override def getPageCount: Future[Int] =
     ws
       .url(f"${baseUrl}/counts/posts.json") // This isnt really properly documented
       .get()
-      .map { resp =>
-        val totalPostCount = (resp.json \ "counts" \ "posts").as[Int]
-
-        // New danbooru actually hard-limits to 200 images
-        // Old limited to 100
-        totalPostCount / 1
-      }
+      .map { resp => (resp.json \ "counts" \ "posts").as[Int] / pageSize }
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[NewDanbooruImage], Int)] =
     ws

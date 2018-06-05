@@ -43,7 +43,7 @@ abstract class OldDanbooruScrapper
       .map { resp =>
         val totalPostCount = (resp.xml \\ "posts" \ "@count").map{ _.text }.head.toInt
 
-        totalPostCount / 100
+        totalPostCount / pageSize
       }
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[OldDanbooruImage], Int)] =

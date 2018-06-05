@@ -63,6 +63,9 @@ abstract class GenericScrapper
   /** Maximum number of threads to fetch pages concurrenyly */
   val maxPageFetchingConcurrency: Int = 5
 
+  /** Each page's size */
+  val pageSize = 100
+
   val logger = Logger(this.getClass)
 
   /** JSON formatter for the image. */
@@ -196,7 +199,8 @@ abstract class GenericScrapper
         ),
         combine(
           set("_id", name),
-          set("favicon", f"${baseUrl}/${favicon}")
+          set("favicon", f"${baseUrl}/${favicon}"),
+          set("pageSize", pageSize)
         ),
         UpdateOptions().upsert(true)
       )
