@@ -6,21 +6,26 @@
                 <table class="table">
                     <tbody>
                         <tr>
-                            <th scope="row">Estimate page count</th>
-                            <td>{{ imboard.estimatePages }}</td>
+                            <th scope="row">Reported page count</th>
+                            <td>{{ imboard.reportedPageCount }}</td>
                         </tr>
                         <tr>
-                            <th scope="row">Last page indexed</th>
-                            <td>{{ imboard.lastIndexedPage }}</td>
+                            <th scope="row">Images indexed</th>
+                            <td>{{ imboard.indexedImageCount }}</td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">Page size</th>
+                            <td>{{ imboard.pageSize }}</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div v-if="imboard.estimatePages && imboard.lastIndexedPage" class="card-index-progressbar">
-                    <b>{{ ((imboard.lastIndexedPage / imboard.estimatePages) * 100).toFixed(2) }}%</b>
+                <div v-if="imboard.reportedPageCount && imboard.indexedImageCount" class="card-index-progressbar">
+                    <b>{{ findPercent(imboard.reportedPageCount, imagesToPages(imboard.indexedImageCount, imboard.pageSize)).toFixed(2) }}%</b>
                     <div class="progress" >
                         <div class="progress-bar" role="progressbar"
-                             v-bind:style="progressBarWidth(imboard.estimatePages, imboard.lastIndexedPage)">
+                             v-bind:style="{width: findPercent(imboard.reportedPageCount, imagesToPages(imboard.indexedImageCount, imboard.pageSize)) + '%'}">
                         </div>
                     </div>
                 </div>
@@ -95,8 +100,12 @@
              }));
          },
 
-         progressBarWidth(allPages, currentPage) {
-             return {width: ((currentPage / allPages) * 100) + "%"};
+         imagesToPages(imgCount, perPage) {
+             return Math.round(imgCount / perPage);
+         },
+
+         findPercent(all, current) {
+             return (current / all) * 100;
          }
      }
  }

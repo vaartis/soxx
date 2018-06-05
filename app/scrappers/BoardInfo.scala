@@ -6,8 +6,8 @@ case class BoardInfo(
   _id: String,
   favicon: String,
   pageSize: Int,
-  estimatePages: Option[Int] = None,
-  lastIndexedPage: Option[Int] = None
+  reportedPageCount: Option[Int] = None,
+  indexedImageCount: Option[Int] = None
 )
 
 object BoardInfo {

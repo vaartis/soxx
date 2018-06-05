@@ -116,7 +116,7 @@ abstract class GenericScrapper
           logger.info(f"Total page count: ${pagesCount}")
 
           imboardInfoCollection
-            .updateOne(equal("_id", name), set("estimatePages", pagesCount))
+            .updateOne(equal("_id", name), set("reportedPageCount", pagesCount))
             .toFuture // Make it set the estimate and ignore the result
 
           Source(fromPage to (pagesCount + 1))
@@ -151,14 +151,20 @@ abstract class GenericScrapper
 
               imageCollection
                 .bulkWrite(operations, BulkWriteOptions().ordered(false))
-                .andThen { case Success(_) =>
-                  imboardInfoCollection
-                    .updateOne(equal("_id", name), set("lastIndexedPage", currentPage))
-                    .toFuture() // Just ignore it
+                .toFuture // After insertion, update the counter in the imboard_info
+                .flatMap { _ =>
+                  imageCollection
+                    .count(Document("from" -> Document("$elemMatch" -> Document("name" -> name)))) // Get the total image count
+                    .toFuture
                 }
-                .subscribe(
-                  (_: BulkWriteResult) => logger.info(s"Finished page ${currentPage}")
-                )
+                .flatMap { indexedImageCount =>
+                  imboardInfoCollection
+                    .updateOne(equal("_id", name), set("indexedImageCount", indexedImageCount.toInt))
+                    .toFuture
+                }.onComplete {
+                  case Success(_) => logger.info(s"Finished page ${currentPage}")
+                  case Failure(e) => logger.error(s"Error processing page ${currentPage}: $e")
+                }
             }
             .recover {
               case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
