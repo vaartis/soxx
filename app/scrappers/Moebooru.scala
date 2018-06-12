@@ -35,15 +35,11 @@ abstract class MoebooruScrapper
 
   override val apiAddition = "post"
 
-  override def getPageCount: Future[Int] =
+  override def getImageCount: Future[Int] =
     ws
       .url(s"${baseUrl}/${apiAddition}.xml")
       .get()
-      .map { resp =>
-        val totalPostCount = (resp.xml \\ "posts" \ "@count").map{ _.text }.head.toInt
-
-        totalPostCount / pageSize
-      }
+      .map { resp => (resp.xml \\ "posts" \ "@count").map{ _.text }.head.toInt }
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[MoebooruImage], Int)] =
     ws

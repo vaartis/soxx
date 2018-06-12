@@ -6,7 +6,7 @@ case class BoardInfo(
   _id: String,
   favicon: String,
   pageSize: Int,
-  reportedPageCount: Option[Int] = None,
+  reportedImageCount: Option[Int] = None,
   indexedImageCount: Option[Int] = None
 )
 

@@ -36,15 +36,11 @@ abstract class OldDanbooruScrapper
 
   override val apiAddition = "index.php?page=dapi&s=post&q=index"
 
-  override def getPageCount: Future[Int] =
+  override def getImageCount: Future[Int] =
     ws
       .url(s"${baseUrl}/${apiAddition}")
       .get()
-      .map { resp =>
-        val totalPostCount = (resp.xml \\ "posts" \ "@count").map{ _.text }.head.toInt
-
-        totalPostCount / pageSize
-      }
+      .map { resp => (resp.xml \\ "posts" \ "@count").map{ _.text }.head.toInt }
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[OldDanbooruImage], Int)] =
     ws

@@ -71,13 +71,13 @@ abstract class GenericScrapper
   /** JSON formatter for the image. */
   implicit val imageFormat: OFormat[ScrapperImage]
 
-  /** Get the total page count.
+  /** Get the total image count.
     *
-    * This function returns the total number of pages on the imageboard.
-    * It doesn't need to bother about the maximum page, since bounding will
+    * Returns the total number of images on the imageboard.
+    * It doesn't need to bother about the maximum number of images, since bounding will
     * be handeled automatically in the indexing function
    */
-  def getPageCount: Future[Int]
+  def getImageCount: Future[Int]
 
   /** Return the page's images.
     *
@@ -104,7 +104,15 @@ abstract class GenericScrapper
       val imageCollection = mongo.db.getCollection[Image]("images")
       val imboardInfoCollection = mongo.db.getCollection[BoardInfo]("imboard_info")
 
-      getPageCount
+      getImageCount
+        .map { imageCount =>
+          imboardInfoCollection
+            .updateOne(equal("_id", name), set("reportedImageCount", imageCount))
+            .toFuture // Save the reported image count and ignore the result
+
+          // Get the page count from the image count and page size
+          imageCount / pageSize
+        }
         .map { pagesCount =>
           // Limit to `toPage` if needed
           toPage match {
@@ -114,10 +122,6 @@ abstract class GenericScrapper
         }
         .map { pagesCount =>
           logger.info(f"Total page count: ${pagesCount}")
-
-          imboardInfoCollection
-            .updateOne(equal("_id", name), set("reportedPageCount", pagesCount))
-            .toFuture // Make it set the estimate and ignore the result
 
           Source(fromPage to (pagesCount + 1))
             .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
