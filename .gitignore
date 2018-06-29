@@ -12,3 +12,4 @@ target
 assets/*.bin
 **/node_modules
 public/
+images/
