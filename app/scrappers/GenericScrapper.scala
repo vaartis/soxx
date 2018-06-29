@@ -146,6 +146,10 @@ abstract class GenericScrapper
           }
         }
         .runWith(Sink.ignore)
+        .andThen { case Success(_) =>
+          stopDownloading()
+          logger.info("Finished downloading")
+        }
     }
   }
 
@@ -218,9 +222,8 @@ abstract class GenericScrapper
               case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
             }
         }
-        .andThen { case Success(f) =>
-          Await.result(f, Duration.Inf)
-
+        .andThen { case Success(_) =>
+          stopIndexing()
           logger.info("Finished scrapping")
         }
     }
@@ -231,6 +234,13 @@ abstract class GenericScrapper
       mat.shutdown()
       materializer = None
     }
+  }
+
+  protected final def stopDownloading() {
+      downloadMaterializer.foreach { mat =>
+        mat.shutdown()
+        downloadMaterializer = None
+      }
   }
 
   override def receive = {
@@ -249,10 +259,7 @@ abstract class GenericScrapper
       startDownloading()
 
     case StopDownloading =>
-      downloadMaterializer.foreach { mat =>
-        mat.shutdown()
-        downloadMaterializer = None
-      }
+      stopDownloading()
   }
 
   override def preStart() {
