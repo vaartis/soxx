@@ -13,6 +13,10 @@
                             <th scope="row">Images indexed</th>
                             <td>{{ imboard.indexedImageCount }}</td>
                         </tr>
+                        <tr>
+                            <th scope="row">Images downloaded</th>
+                            <td>{{ imboard.downloadedImageCount}}</td>
+                        </tr>
 
                         <tr>
                             <th scope="row">Page size</th>
@@ -30,6 +34,16 @@
                     </div>
                 </div>
 
+                <div v-if="imboard.indexedImageCount && imboard.downloadedImageCount" class="card-progressbar">
+                    <b>{{ findPercent(imboard.indexedImageCount, imboard.downloadedImageCount).toFixed(2) }}%</b>
+                    <div class="progress" >
+                        <div class="progress-bar bg-warning" role="progressbar"
+                             v-bind:style="{width: findPercent(imboard.indexedImageCount, imboard.downloadedImageCount) + '%'}">
+                        </div>
+                    </div>
+                </div>
+
+
                 <button class="btn btn-primary"
                         v-if="scrapperStatus[imboard._id] ? !scrapperStatus[imboard._id].isIndexing : false"
                         v-on:click="scrapperAction(imboard._id, 'start-indexing')">
@@ -38,6 +52,16 @@
                 <button class="btn btn-danger"
                         v-else v-on:click="scrapperAction(imboard._id, 'stop-indexing')">
                     Stop indexing
+                </button>
+
+                <button class="btn btn-warning"
+                        v-if="scrapperStatus[imboard._id] ? !scrapperStatus[imboard._id].isDownloading : false"
+                        v-on:click="scrapperAction(imboard._id, 'start-downloading')">
+                    Start downloading
+                </button>
+                <button class="btn btn-danger"
+                        v-else v-on:click="scrapperAction(imboard._id, 'stop-downloading')">
+                    Stop downloading
                 </button>
             </div>
         </div>

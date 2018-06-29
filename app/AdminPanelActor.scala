@@ -131,6 +131,9 @@ class AdminPanelActor(out: ActorRef)(
                 case "start-indexing" => StartIndexing()
                 case "stop-indexing" => StopIndexing
 
+                case "start-downloading" => StartDownloading
+                case "stop-downloading" => StopDownloading
+              })
             }
             .andThen { case _ =>
               self ! Json.obj("tp" -> "imboard-scrapper-status", "imboard" -> data.imboard)
