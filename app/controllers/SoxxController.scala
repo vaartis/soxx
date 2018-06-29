@@ -26,6 +26,13 @@ class SoxxController @Inject()(
     Ok(views.html.image())
   }
 
+  def image_files(name: String) = Action { implicit request: Request[AnyContent] =>
+    import java.nio.file.{Files, Paths}
+
+    val p = Paths.get("images", name)
+    if (Files.exists(p)) { Ok.sendFile(p.toFile, true) } else { NotFound(f"Image $name not found") }
+  }
+
   def admin = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.admin())
   }
