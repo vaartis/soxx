@@ -146,9 +146,10 @@ abstract class GenericScrapper
           }
         }
         .runWith(Sink.ignore)
-        .andThen { case Success(_) =>
-          stopDownloading()
-          logger.info("Finished downloading")
+        .andThen {
+          case Success(_) =>
+            stopDownloading()
+            logger.info("Finished downloading")
         }
     }
   }
@@ -222,9 +223,14 @@ abstract class GenericScrapper
               case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
             }
         }
-        .andThen { case Success(_) =>
-          stopIndexing()
-          logger.info("Finished scrapping")
+        .onComplete {
+          case Success(f) =>
+            Await.result(f, Duration.Inf)
+            stopIndexing()
+            logger.info("Scrapping finished")
+          case Failure(e) =>
+            stopIndexing()
+            logger.error(f"Indexing error: $e")
         }
     }
   }
