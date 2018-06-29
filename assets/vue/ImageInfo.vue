@@ -68,10 +68,9 @@
          },
 
          imageSrc() {
-             // Check if undefined
-             if (this.image.from) {
-                 return this.image.from[0].image;
-             }
+             return this.image.metadataOnly
+                  ? (this.image.from ? this.image.from[0].image : null)
+                  : `/image_files/${this.image.md5}${this.image.extension}`;
          }
      },
 
