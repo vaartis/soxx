@@ -28,6 +28,7 @@ abstract class MoebooruScrapper
   // There doesn't seem to be a real limit,
   // so just set it to 10
   override val maxPageFetchingConcurrency = 10
+  override val maxImageFetchingConcurrency = 10
 
   override type ScrapperImage = MoebooruImage
 

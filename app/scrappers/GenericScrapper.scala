@@ -1,14 +1,17 @@
 package soxx.scrappers
 
+import akka.Done
+import java.nio.file._
 import java.util.Arrays
 import scala.concurrent.duration._
 import scala.util._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
 import akka.stream._
-import akka.stream.scaladsl.Source
-import play.api.libs.json._
+import akka.stream.scaladsl._
 import akka.actor._
+import play.api.libs.json._
+import play.api.libs.ws._
 import play.api.Logger
 
 import soxx.mongowrapper._
@@ -26,8 +29,9 @@ import org.mongodb.scala.model.Filters._
  */
 abstract class GenericScrapper
   (
-    implicit mongo: Mongo,
-    ec: ExecutionContext
+    implicit ws: WSClient,
+    mongo: Mongo,
+    ec: ExecutionContext,
   ) extends Actor {
 
   /** Defines the structure of the image returned by the imageboard.
@@ -63,6 +67,9 @@ abstract class GenericScrapper
   /** Maximum number of threads to fetch pages concurrenyly */
   val maxPageFetchingConcurrency: Int = 5
 
+  /** Maximum number of threads for image fetching */
+  val maxImageFetchingConcurrency: Int = 5
+
   /** Each page's size */
   val pageSize = 100
 
@@ -95,6 +102,53 @@ abstract class GenericScrapper
   def scrapperImageToImage(img: ScrapperImage): Option[Image]
 
   protected final var materializer: Option[ActorMaterializer] = None
+  protected final var downloadMaterializer: Option[ActorMaterializer] = None
+
+  protected final def startDownloading(): Unit = {
+    if (downloadMaterializer.isEmpty) {
+      implicit val actualMaterializer = ActorMaterializer()(context)
+      downloadMaterializer = Some(actualMaterializer)
+
+      val imagesDir = Paths.get("images", name)
+      if (Files.notExists(imagesDir)) {
+        // Create the directory to store images in..
+        Files.createDirectories(imagesDir)
+      }
+
+      val imageCollection = mongo.db.getCollection[Image]("images")
+      val imboardsCollection = mongo.db.getCollection[BoardInfo]("imboard_info")
+
+      Source
+        .fromFuture(
+          imageCollection
+            .find(combine(
+              equal("metadataOnly", true),
+              Document("from" -> Document("$elemMatch" -> Document("name" -> name)))
+            )) // Find the images that only have metadata
+            .toFuture
+        )
+        .mapConcat { _.to[collection.immutable.Iterable] }
+        .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
+          def setMetatadaOnlyFalse() = imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
+
+          val savePath = Paths.get(f"images/${image.md5}${image.extension}")
+
+          if (Files.exists(savePath)) {
+            // Just update the metadata
+            // This is needed if several imageboards have the same image
+            setMetatadaOnlyFalse().map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
+          } else {
+            // Actually download the image
+            ws.url(image.from.head.image).get()
+              .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
+              .flatMap { case IOResult(_, Success(Done)) => imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
+              // .flatMap { case v: UpdateResult if v.wasAcknowledged => imboardsCollection.update("")  }
+              .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
+          }
+        }
+        .runWith(Sink.ignore)
+    }
+  }
 
   protected final def startIndexing(fromPage: Int, toPage: Option[Int]): Unit = {
     if (materializer == None) {
@@ -201,6 +255,14 @@ abstract class GenericScrapper
         isDownloading = !downloadMaterializer.isEmpty
       )
 
+    case StartDownloading =>
+      startDownloading()
+
+    case StopDownloading =>
+      downloadMaterializer.foreach { mat =>
+        mat.shutdown()
+        downloadMaterializer = None
+      }
   }
 
   override def preStart() {

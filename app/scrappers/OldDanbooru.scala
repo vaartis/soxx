@@ -29,6 +29,7 @@ abstract class OldDanbooruScrapper
   // if you see that the indexing just stops, this might be
   // the reason it doesnt progress (e.g. at 10 most just hang)
   override val maxPageFetchingConcurrency = 8
+  override val maxImageFetchingConcurrency = 8
 
   override type ScrapperImage = OldDanbooruImage
 

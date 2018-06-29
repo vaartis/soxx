@@ -27,6 +27,7 @@ abstract class NewDanbooruScrapper
   )
 
   override val maxPageFetchingConcurrency = 10
+  override val maxImageFetchingConcurrency = 10
 
   override type ScrapperImage = NewDanbooruImage
 
