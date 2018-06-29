@@ -18,7 +18,7 @@ class SoxxController @Inject()(
   system: ActorSystem
 )(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
-  def index() = Action { implicit request: Request[AnyContent] =>
+  def index = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.index())
   }
 
