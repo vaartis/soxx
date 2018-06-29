@@ -142,7 +142,6 @@ abstract class GenericScrapper
             ws.url(image.from.head.image).get()
               .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
               .flatMap { case IOResult(_, Success(Done)) => imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
-              // .flatMap { case v: UpdateResult if v.wasAcknowledged => imboardsCollection.update("")  }
               .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
           }
         }
@@ -209,17 +208,8 @@ abstract class GenericScrapper
 
               imageCollection
                 .bulkWrite(operations, BulkWriteOptions().ordered(false))
-                .toFuture // After insertion, update the counter in the imboard_info
-                .flatMap { _ =>
-                  imageCollection
-                    .count(Document("from" -> Document("$elemMatch" -> Document("name" -> name)))) // Get the total image count
-                    .toFuture
-                }
-                .flatMap { indexedImageCount =>
-                  imboardInfoCollection
-                    .updateOne(equal("_id", name), set("indexedImageCount", indexedImageCount.toInt))
-                    .toFuture
-                }.onComplete {
+                .toFuture
+                .onComplete {
                   case Success(_) => logger.info(s"Finished page ${currentPage}")
                   case Failure(e) => logger.error(s"Error processing page ${currentPage}: $e")
                 }

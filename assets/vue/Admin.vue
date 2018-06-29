@@ -63,6 +63,15 @@
          ws.onmessage = (msg) => {
              let msgData = JSON.parse(msg.data);
              switch (msgData.tp) {
+                 case "image-counters-updated":
+                     let ind = _.findIndex(this.imboards, {_id: msgData.imboard});
+
+                     Vue.set(
+                         this.imboards,
+                         ind,
+                         _.merge(this.imboards[ind], msgData.value)
+                     );
+                     break;
                  case "imboard-updated":
                      Vue.set(
                          this.imboards,
@@ -83,6 +92,7 @@
                  this.imboards = imboard_list;
 
                  _.map(imboard_list, (imboard) => {
+                     ws.send(JSON.stringify({tp: "sub-to-image-counters", imboard: imboard._id}))
                      ws.send(JSON.stringify({tp: "imboard-scrapper-status", imboard: imboard._id}))
                  });
              });

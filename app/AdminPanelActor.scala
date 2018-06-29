@@ -29,11 +29,13 @@ class AdminPanelActor(out: ActorRef)(
   ec: ExecutionContext
 ) extends Actor {
 
+  case class ImboardCountersMsg(imboard: String)
   case class IsIndexingMsg(imboard: String)
   case class ScrapperActionMsg(imboard: String, action: String)
 
   implicit val iif = Json.format[IsIndexingMsg]
   implicit val iaf = Json.format[ScrapperActionMsg]
+  implicit val imc = Json.format[ImboardCountersMsg]
 
   implicit val actorResolveTimeout: Timeout = 5 seconds
 
@@ -67,6 +69,40 @@ class AdminPanelActor(out: ActorRef)(
   override def receive = {
     case msg: JsObject =>
       (msg \ "tp").as[String] match {
+        case "sub-to-image-counters" =>
+          import org.mongodb.scala._
+          import org.mongodb.scala.model.Filters._
+          import org.mongodb.scala.model.Updates.combine
+
+          val data = msg.as[ImboardCountersMsg]
+          val imageCollection = mongo.db.getCollection("images")
+
+          def getAndSendData {
+                for (
+                  indexedImageCount <- imageCollection.count(Document("from" -> Document("$elemMatch" -> Document("name" -> data.imboard))));
+                  downloadedImageCount <- imageCollection.count(
+                    combine(
+                      equal("metadataOnly", false),
+                      Document("from" -> Document("$elemMatch" -> Document("name" -> data.imboard)))
+                    )
+                  )
+                ) {
+                  out ! Json.obj(
+                    "tp" -> "image-counters-updated",
+                    "imboard" -> data.imboard,
+                    "value" -> Json.obj(
+                      "indexedImageCount" -> indexedImageCount,
+                      "downloadedImageCount" -> downloadedImageCount
+                    )
+                  )
+                }
+          }
+
+          imageCollection
+            .watch()
+            .foreach { change => if (change.getOperationType != OperationType.INVALIDATE) getAndSendData }
+
+          getAndSendData
 
         case "imboard-scrapper-status" =>
           val data = msg.as[IsIndexingMsg]
