@@ -195,9 +195,12 @@ abstract class GenericScrapper
 
     case StopIndexing =>
       stopIndexing()
+    case ScrapperStatusMsg =>
+      sender ! ScrapperStatus(
+        isIndexing = !materializer.isEmpty,
+        isDownloading = !downloadMaterializer.isEmpty
+      )
 
-    case IsIndexing =>
-      sender ! !materializer.isEmpty
   }
 
   override def preStart() {

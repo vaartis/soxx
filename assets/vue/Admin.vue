@@ -31,11 +31,12 @@
                 </div>
 
                 <button class="btn btn-primary"
-                        v-if="!isIndexing[imboard._id]" v-on:click="indexingAction(imboard._id, 'start')">
+                        v-if="scrapperStatus[imboard._id] ? !scrapperStatus[imboard._id].isIndexing : false"
+                        v-on:click="scrapperAction(imboard._id, 'start-indexing')">
                     Start indexing
                 </button>
                 <button class="btn btn-danger"
-                        v-else v-on:click="indexingAction(imboard._id, 'stop')">
+                        v-else v-on:click="scrapperAction(imboard._id, 'stop-indexing')">
                     Stop indexing
                 </button>
             </div>
@@ -54,7 +55,7 @@
      data() {
          return {
              imboards: [],
-             isIndexing: {},
+             scrapperStatus: {},
          };
      },
 
@@ -72,10 +73,8 @@
                  case "imboard-deleted":
                      this.imboards.splice(_.findIndex(this.imboards, {_id: msgData.value}), 1)
                      break;
-                 case "imboard-is-indexing":
-                     Vue.set(this.isIndexing, msgData.imboard, msgData.value);
-
-                     this.isIndexing[msgData.imboard] = msgData.value;
+                 case "imboard-scrapper-status":
+                     Vue.set(this.scrapperStatus, msgData.imboard, msgData.value);
              }
          };
 
@@ -84,7 +83,7 @@
                  this.imboards = imboard_list;
 
                  _.map(imboard_list, (imboard) => {
-                     ws.send(JSON.stringify({tp: "imboard-is-indexing", imboard: imboard._id}))
+                     ws.send(JSON.stringify({tp: "imboard-scrapper-status", imboard: imboard._id}))
                  });
              });
          });
@@ -92,9 +91,9 @@
      },
 
      methods: {
-         indexingAction(boardName, action) {
+         scrapperAction(boardName, action) {
              ws.send(JSON.stringify({
-                 tp: "imboard-indexing-action",
+                 tp: "imboard-scrapper-action",
                  imboard: boardName,
                  action: action
              }));

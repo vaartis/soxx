@@ -30,10 +30,10 @@ class AdminPanelActor(out: ActorRef)(
 ) extends Actor {
 
   case class IsIndexingMsg(imboard: String)
-  case class IndexingActionMsg(imboard: String, action: String)
+  case class ScrapperActionMsg(imboard: String, action: String)
 
   implicit val iif = Json.format[IsIndexingMsg]
-  implicit val iaf = Json.format[IndexingActionMsg]
+  implicit val iaf = Json.format[ScrapperActionMsg]
 
   implicit val actorResolveTimeout: Timeout = 5 seconds
 
@@ -67,36 +67,37 @@ class AdminPanelActor(out: ActorRef)(
   override def receive = {
     case msg: JsObject =>
       (msg \ "tp").as[String] match {
-        case "imboard-is-indexing" =>
+
+        case "imboard-scrapper-status" =>
           val data = msg.as[IsIndexingMsg]
 
           system
             .actorSelection(system / "scrapper-supervisor" / f"${data.imboard}-scrapper")
             .resolveOne
             .flatMap { case actorRef =>
-              actorRef ? IsIndexing
+              actorRef ? ScrapperStatusMsg
             }
-            .andThen { case Success(isIndexing) =>
+            .andThen { case Success(scrapperStatus) =>
               out ! Json.obj(
-                "tp" -> "imboard-is-indexing",
+                "tp" -> "imboard-scrapper-status",
                 "imboard" -> data.imboard,
-                "value" -> isIndexing.asInstanceOf[Boolean]
+                "value" -> Json.toJson(scrapperStatus.asInstanceOf[ScrapperStatus])
               )
             }
-        case "imboard-indexing-action" =>
-          val data = msg.as[IndexingActionMsg]
+        case "imboard-scrapper-action" =>
+          val data = msg.as[ScrapperActionMsg]
 
           system
             .actorSelection(system / "scrapper-supervisor" / f"${data.imboard}-scrapper")
             .resolveOne
             .andThen { case Success(actorRef) =>
-              data.action match {
-                case "start" => actorRef ! StartIndexing()
-                case "stop" => actorRef ! StopIndexing
-              }
+              actorRef ! (data.action match {
+                case "start-indexing" => StartIndexing()
+                case "stop-indexing" => StopIndexing
+
             }
             .andThen { case _ =>
-              self ! Json.obj("tp" -> "imboard-is-indexing", "imboard" -> data.imboard)
+              self ! Json.obj("tp" -> "imboard-scrapper-status", "imboard" -> data.imboard)
             }
       }
   }
