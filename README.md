@@ -1,22 +1,32 @@
 # Soxx!
 
-This is supposed to be a thing to scrape and index imageboards and
-boorus. It supports a number of them now and adding support is pretty trivial.
+As of now, we can index and scrape images from several popular imageboards
+(as much as their API allows it) via a basic web interface admin panel. There are
+plans to make adding imageboards easier with a configuration file
+
+The image viewing part is somewhat better: you can view images either
+right on the search page or their own page, you can search images by
+excluding, including tags and regular expressions run on tags.
 
 This project is done in Scala+Play+Akka, because I like actors and erlang :P
 
 Please do suggest things and feel free to fork and contribute. Documentation
 is a little lacking at the moment, but i will try to make it better in the future.
 
-Support for amazon s3 compaitable storage is also planned, right now images
-are just indexed and not downloaded, i.e. they are linked from the page
-we got them from (sorry).
+Support for amazon s3 compaitable storage is also planned. As of now,
+images are indexed and you can then download them because indexing is much faster.
 
-I will probably also set up some testing and that stuff where appropriate.
+The tests will also be probably set up where appropriate.
 
-The only outside dependencies are NodeJS and MongoDB, just installing them
-should be enough to get things running by just typing `sbt run`.
+To actually run this, you'll need to:
 
-## Notes
+1. Install NodeJS+NPM and run `npm install` in the assets directory
+2. Install MongoDB, make it a cluster in the settings and start it
+3. Run `sbt` and then put `run` in there to start the dev environment
 
-In order for collection watching to work mongodb needs to be configured as a cluster.
+# Screenshots
+
+That's how the image embded in the search page looks right now (all pictures
+belong to their respective authors)
+
+![Embedded image](screenshots/embedded.png)
