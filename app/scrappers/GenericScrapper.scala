@@ -178,7 +178,7 @@ abstract class GenericScrapper
               case None => pagesCount
           }
         }
-        .map { pagesCount =>
+        .flatMap { pagesCount =>
           logger.info(f"Total page count: ${pagesCount}")
 
           Source(fromPage to (pagesCount + 1))
@@ -223,14 +223,10 @@ abstract class GenericScrapper
               case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
             }
         }
-        .onComplete {
-          case Success(f) =>
-            Await.result(f, Duration.Inf)
+        .andThen {
+          case Success(_) =>
             stopIndexing()
             logger.info("Scrapping finished")
-          case Failure(e) =>
-            stopIndexing()
-            logger.error(f"Indexing error: $e")
         }
     }
   }
