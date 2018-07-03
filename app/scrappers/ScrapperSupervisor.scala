@@ -1,13 +1,16 @@
 package soxx.scrappers
 
 import javax.inject._
+import scala.util._
 
 import akka.actor._
 import scala.concurrent._
-
 import play.api.libs.ws._
 import play.api.inject.ApplicationLifecycle
 import play.api.Logger
+import toml.Toml
+import toml.Codecs._
+
 import org.mongodb.scala._
 import org.mongodb.scala.model._
 
@@ -25,7 +28,48 @@ class ScrapperSupervisor @Inject()
   override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
   val logger = Logger(this.getClass)
 
-  override def preStart() {
+  /* Reads the `scrappers.toml` configuration file and start the scrappers defined.
+   *
+   * Additional documentation about defining scrappers can be
+   * found in the aforementioned file.
+   */
+  def startScrappersFromConfig() {
+    Try {
+      val cfgFile = scala.io.Source.fromFile("scrappers.toml")
+      try cfgFile.mkString finally cfgFile.close
+    } match {
+      case Success(configStr) =>
+        Toml.parseAsValue[Map[String, ScrapperConfig]](configStr) match {
+          case Right(config) =>
+            config.foreach { case (name, config) =>
+              if (config.enabled) {
+                val scrapperType = config.`type` match {
+                  case "old-danbooru" => classOf[OldDanbooruScrapper]
+                  case "new-danbooru" => classOf[NewDanbooruScrapper]
+                  case "moebooru" => classOf[MoebooruScrapper]
+                }
+
+                context.actorOf(
+                  Props(
+                    scrapperType,
+                    name,
+                    config.`base-url`,
+                    config.favicon,
+                    implicitly[WSClient],
+                    implicitly[Mongo],
+                    implicitly[ExecutionContext]
+                  ),
+                  f"$name-scrapper"
+                )
+              }
+            }
+          case Left(pE) => logger.error(f"Error reading scrapper config file: $pE")
+        }
+      case Failure(e) => logger.error(f"Error opening scrapper config file: $e")
+    }
+  }
+
+  override def preStart {
     mongo.db
       .getCollection("images")
       .createIndexes(
@@ -40,37 +84,7 @@ class ScrapperSupervisor @Inject()
         }
       )
 
-    // Start scrapper actors
-    Seq(
-      // Old-danbooru-like
-      (classOf[SafebooruScrapper], "safebooru-scrapper"),
-      (classOf[FurrybooruScrapper], "furrybooru-scrapper"),
-
-      // Moebooru-like
-      // They mostly don't give images out to links,
-      // so they need to be downloaded
-      (classOf[KonachanScrapper], "konachan-scrapper"),
-      (classOf[YandereScrapper], "yandere-scrapper"),
-      // (classOf[SakugabooruScrapper], "sakugabooru-scrapper"),
-
-      // New-danbooru-like
-      (classOf[DanbooruScrapper], "danbooru-scrapper")
-    ).foreach { case (scrapperClass, name) =>
-        context.actorOf(
-          Props(
-            scrapperClass,
-            implicitly[WSClient],
-            implicitly[Mongo],
-            implicitly[ExecutionContext]
-          ),
-          name
-        )
-
-        // Names really should be moved into something that is statically accessible
-        // and can be made virtual. This is possible by implementing a trait
-        // and creating companion objects for each class, but that's too
-        // much code for too little benefit
-    }
+    startScrappersFromConfig()
 
     lifecycle.addStopHook { () =>
       Future { context.stop(self) }

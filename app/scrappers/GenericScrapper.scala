@@ -27,12 +27,14 @@ import org.mongodb.scala.model.Filters._
  * You need to override some things and you get a functional scrapper
  * for most of the imageboards.
  */
-abstract class GenericScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext,
-  ) extends Actor {
+abstract class GenericScrapper(
+  name: String,
+  baseUrl: String,
+  favicon: String
+)(implicit ws: WSClient,
+  mongo: Mongo,
+  ec: ExecutionContext,
+) extends Actor {
 
   /** Defines the structure of the image returned by the imageboard.
     *
@@ -43,26 +45,11 @@ abstract class GenericScrapper
     */
   type ScrapperImage
 
-  /** Name of the scrapper and/or the imageboard.
-    *
-    * This name is used for storing the data in MongoDB
-   */
-  val name: String
-
-  /** Base imageboard URL from which others are derived.
-    *
-    * The URL must not include a trailing slash
-    */
-  val baseUrl: String
-
   /** The string that needs to be added to the base URL to access the API.
     *
     * The URL must not include a trailing slash
    */
   val apiAddition: String
-
-  /** The imageboard favicon file relative to the [[baseUrl]] */
-  val favicon: String = "favicon.ico"
 
   /** Maximum number of threads to fetch pages concurrenyly */
   val maxPageFetchingConcurrency: Int = 5

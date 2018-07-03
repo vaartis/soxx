@@ -1,0 +1,52 @@
+# Scrapper configuration file.
+#
+# You can define new scrappers here by using the pre-defined templates
+# of other imageboards. Parameters are as follows:
+#
+#  The imageboard name Will be used in the database, actor system, logs and other things
+#  and thus must be unique, you can think of it as the scrapper ID
+#   [imageboard-name]
+#
+#  Type is the pre-defined template the scrapper will use
+#   type = "old-danbooru"
+#         "new-danbooru"
+#         "moebooru"
+#
+#  Base URL is the URL all requests by the scrapper will be made to,
+#  it SHOULD NOT include a trailing slash, as this can cause errors
+#   base-url = "https://somebooru.org"
+#
+#  Optionally you can disable the scrapper altogether, then it will not be started at all
+#   enabled = false
+
+# Old-danbooru-like
+
+[safebooru]
+type = "old-danbooru"
+base-url = "https://safebooru.org"
+
+[furrybooru]
+type = "old-danbooru"
+base-url = "http://furry.booru.org"
+
+# New-danbooru-style
+
+# Errors out after the 1000th page (API limitation)
+[danbooru]
+type = "new-danbooru"
+base-url = "https://danbooru.donmai.us"
+
+# Moebooru-like
+
+[konachan]
+type = "moebooru"
+base-url = "https://konachan.com"
+
+[yandere]
+type = "moebooru"
+base-url = "https://yande.re"
+
+[sakugabooru]
+type = "moebooru"
+base-url = "https://sakugabooru.com"
+enabled = false
