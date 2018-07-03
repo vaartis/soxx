@@ -60,7 +60,7 @@ abstract class GenericScrapper(
   /** Each page's size */
   val pageSize = 100
 
-  val logger = Logger(this.getClass)
+  val logger = Logger(self.path.name)
 
   /** JSON formatter for the image. */
   implicit val imageFormat: OFormat[ScrapperImage]
