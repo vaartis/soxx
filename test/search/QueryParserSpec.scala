@@ -1,8 +1,8 @@
+package soxx.search
+
 import org.scalatest._
 
 import scala.util.parsing.combinator._
-
-import soxx.search._
 
 class QueryParserSpec extends FlatSpec with Matchers with Inside {
   val parser = new QueryParser()
