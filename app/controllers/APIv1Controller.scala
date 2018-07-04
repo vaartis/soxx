@@ -49,7 +49,7 @@ class APIv1Controller @Inject()
       Json.toJson(
         name match {
           case Some(nm) =>
-            Await.result(collection.find(Document("_id" -> name)).toFuture, 5 seconds)
+            Await.result(collection.find(Document("_id" -> nm)).toFuture, 5 seconds)
           case None =>
             Await.result(collection.find().toFuture, 5 seconds)
         }
