@@ -30,7 +30,6 @@ class ScrapperSupervisor @Inject()
       .getCollection("images")
       .createIndexes(
         Seq(
-          IndexModel(Document("originalID" -> 1)),
           IndexModel(Document("from" -> 1)),
           IndexModel(Document("md5" -> 1))
         )
