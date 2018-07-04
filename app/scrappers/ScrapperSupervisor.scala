@@ -5,6 +5,7 @@ import scala.util._
 
 import akka.actor._
 import scala.concurrent._
+import play.api.Configuration
 import play.api.libs.ws._
 import play.api.inject.ApplicationLifecycle
 import play.api.Logger
@@ -22,7 +23,8 @@ class ScrapperSupervisor @Inject()
     implicit ec: ExecutionContext,
     ws: WSClient,
     mongo: Mongo,
-    lifecycle: ApplicationLifecycle
+    lifecycle: ApplicationLifecycle,
+    appConfig: Configuration
   ) extends Actor {
 
   override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
@@ -33,9 +35,9 @@ class ScrapperSupervisor @Inject()
    * Additional documentation about defining scrappers can be
    * found in the aforementioned file.
    */
-  def startScrappersFromConfig() {
+  def startScrappersFromConfig(configPath: String = appConfig.get[String]("soxx.scrappers.configFile")) {
     Try {
-      val cfgFile = scala.io.Source.fromFile("scrappers.toml")
+      val cfgFile = scala.io.Source.fromFile(configPath)
       try cfgFile.mkString finally cfgFile.close
     } match {
       case Success(configStr) =>
