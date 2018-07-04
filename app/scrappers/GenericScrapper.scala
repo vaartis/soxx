@@ -116,7 +116,6 @@ abstract class GenericScrapper
       }
 
       val imageCollection = mongo.db.getCollection[Image]("images")
-      val imboardsCollection = mongo.db.getCollection[BoardInfo]("imboard_info")
 
       Source
         .fromFuture(
