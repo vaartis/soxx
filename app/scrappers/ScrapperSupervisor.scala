@@ -49,7 +49,9 @@ class ScrapperSupervisor @Inject()
                   case "old-danbooru" => classOf[OldDanbooruScrapper]
                   case "new-danbooru" => classOf[NewDanbooruScrapper]
                   case "moebooru" => classOf[MoebooruScrapper]
-                  case i => throw new IllegalArgumentException(f"Unknown type used for imageboard $name: $i")
+                  case i =>
+                    logger.error(f"Unknown type used for imageboard $name: $i, skipping")
+                    return
                 }
 
                 context.actorOf(
