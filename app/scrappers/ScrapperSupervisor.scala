@@ -8,9 +8,9 @@ import scala.concurrent._
 import play.api.libs.ws._
 import play.api.inject.ApplicationLifecycle
 import play.api.Logger
-
 import org.mongodb.scala._
 import org.mongodb.scala.model._
+
 import soxx.mongowrapper._
 
 @Singleton
