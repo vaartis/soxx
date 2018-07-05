@@ -2,13 +2,13 @@ package soxx.scrappers
 
 import javax.inject._
 import scala.util._
+import scala.util.control.NonFatal
 
 import akka.actor._
 import scala.concurrent._
-import play.api.Configuration
+import play.api.{Configuration, Logger}
 import play.api.libs.ws._
 import play.api.inject.ApplicationLifecycle
-import play.api.Logger
 import toml.Toml
 import toml.Codecs._
 
@@ -36,41 +36,45 @@ class ScrapperSupervisor @Inject()
    * found in the aforementioned file.
    */
   def startScrappersFromConfig(configPath: String = appConfig.get[String]("soxx.scrappers.configFile")) {
-    Try {
-      val cfgFile = scala.io.Source.fromFile(configPath)
-      try cfgFile.mkString finally cfgFile.close
-    } match {
-      case Success(configStr) =>
-        Toml.parseAsValue[Map[String, ScrapperConfig]](configStr) match {
-          case Right(config) =>
-            config.foreach { case (name, config) =>
-              if (config.enabled) {
-                val scrapperType = config.`type` match {
-                  case "old-danbooru" => classOf[OldDanbooruScrapper]
-                  case "new-danbooru" => classOf[NewDanbooruScrapper]
-                  case "moebooru" => classOf[MoebooruScrapper]
-                  case i =>
-                    logger.error(f"Unknown type used for imageboard $name: $i, skipping")
-                    return
-                }
+    val configStr =
+      // Very ugly, but scala's file IO support is pretty poor..
+      try {
+        val cfgFile = scala.io.Source.fromFile(configPath)
+        try cfgFile.mkString finally cfgFile.close
+      } catch {
+        case NonFatal(e) =>
+          logger.error(f"Error reading scrapper config file ($configPath): $e")
+          return
+      }
 
-                context.actorOf(
-                  Props(
-                    scrapperType,
-                    name,
-                    config.`base-url`,
-                    config.favicon,
-                    implicitly[WSClient],
-                    implicitly[Mongo],
-                    implicitly[ExecutionContext]
-                  ),
-                  f"$name-scrapper"
-                )
-              }
+    Toml.parseAsValue[Map[String, ScrapperConfig]](configStr) match {
+      case Right(config) =>
+        config.foreach { case (name, config) =>
+          if (config.enabled) {
+            val scrapperType = config.`type` match {
+              case "old-danbooru" => classOf[OldDanbooruScrapper]
+              case "new-danbooru" => classOf[NewDanbooruScrapper]
+              case "moebooru" => classOf[MoebooruScrapper]
+              case i =>
+                logger.error(f"Unknown type used for imageboard $name: $i, skipping")
+                return
             }
-          case Left(pE) => logger.error(f"Error reading scrapper config file: $pE")
+
+            context.actorOf(
+              Props(
+                scrapperType,
+                name,
+                config.`base-url`,
+                config.favicon,
+                implicitly[WSClient],
+                implicitly[Mongo],
+                implicitly[ExecutionContext]
+              ),
+              f"$name-scrapper"
+            )
+          }
         }
-      case Failure(e) => logger.error(f"Error opening scrapper config file: $e")
+      case Left(pE) => logger.error(f"Error reading scrapper config file: $pE")
     }
   }
 
