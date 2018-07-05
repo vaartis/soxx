@@ -64,7 +64,7 @@ class ScrapperSupervisor @Inject()
               Props(
                 scrapperType,
                 name,
-                config.`base-url`,
+                config.`base-url`.stripSuffix("/"), // Remove the trailing slash
                 config.favicon,
                 implicitly[WSClient],
                 implicitly[Mongo],
