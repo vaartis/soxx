@@ -7,12 +7,15 @@ import play.api.libs.json._
 
 import soxx.mongowrapper._
 
-abstract class MoebooruScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends GenericScrapper {
+class MoebooruScrapper(
+  name: String,
+  baseUrl: String,
+  favicon: String
+)(
+  implicit ws: WSClient,
+  mongo: Mongo,
+  ec: ExecutionContext
+) extends GenericScrapper(baseUrl, favicon, name) {
 
   case class MoebooruImage(
     id: Int,
@@ -81,38 +84,4 @@ abstract class MoebooruScrapper
       )
     )
   }
-}
-
-class KonachanScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends MoebooruScrapper {
-
-  override val baseUrl = "https://konachan.com"
-  override val name = "konachan"
-}
-
-class YandereScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends MoebooruScrapper {
-
-  override val baseUrl = "http://yande.re"
-  override val name = "yandere"
-}
-
-/* This one is mostly videos but it's still moebooru */
-class SakugabooruScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends MoebooruScrapper {
-
-  override val baseUrl = "https://www.sakugabooru.com"
-  override val name = "sakugabooru"
 }

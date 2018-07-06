@@ -7,12 +7,15 @@ import play.api.libs.json._
 
 import soxx.mongowrapper._
 
-abstract class NewDanbooruScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends GenericScrapper {
+class NewDanbooruScrapper(
+  name: String,
+  baseUrl: String,
+  favicon: String
+)(
+  implicit ws: WSClient,
+  mongo: Mongo,
+  ec: ExecutionContext
+) extends GenericScrapper(baseUrl, favicon, name) {
 
   case class NewDanbooruImage(
     id: Int,
@@ -87,16 +90,4 @@ abstract class NewDanbooruScrapper
       )
     } else { None }
   }
-}
-
-// Errors out on 1000th+ page
-class DanbooruScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends NewDanbooruScrapper {
-
-  override val baseUrl = "https://danbooru.donmai.us"
-  override val name = "danbooru"
 }

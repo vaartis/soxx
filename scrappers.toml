@@ -1,0 +1,30 @@
+# Old-danbooru-like
+
+[safebooru]
+type = "old-danbooru"
+base-url = "https://safebooru.org"
+
+[furrybooru]
+type = "old-danbooru"
+base-url = "http://furry.booru.org"
+
+# New-danbooru-style
+
+[danbooru]
+type = "new-danbooru"
+base-url = "https://danbooru.donmai.us"
+
+# Moebooru-like
+
+[konachan]
+type = "moebooru"
+base-url = "https://konachan.com"
+
+[yandere]
+type = "moebooru"
+base-url = "https://yande.re"
+
+[sakugabooru]
+type = "moebooru"
+base-url = "https://sakugabooru.com"
+enabled = false

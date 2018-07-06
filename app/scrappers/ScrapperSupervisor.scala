@@ -1,13 +1,17 @@
 package soxx.scrappers
 
 import javax.inject._
+import scala.util._
+import scala.util.control.NonFatal
 
 import akka.actor._
 import scala.concurrent._
-
+import play.api.{Configuration, Logger}
 import play.api.libs.ws._
 import play.api.inject.ApplicationLifecycle
-import play.api.Logger
+import toml.Toml
+import toml.Codecs._
+
 import org.mongodb.scala._
 import org.mongodb.scala.model._
 
@@ -19,13 +23,62 @@ class ScrapperSupervisor @Inject()
     implicit ec: ExecutionContext,
     ws: WSClient,
     mongo: Mongo,
-    lifecycle: ApplicationLifecycle
+    lifecycle: ApplicationLifecycle,
+    appConfig: Configuration
   ) extends Actor {
 
   override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
   val logger = Logger(this.getClass)
 
-  override def preStart() {
+  /* Reads the `scrappers.toml` configuration file and start the scrappers defined.
+   *
+   * Additional documentation about defining scrappers can be
+   * found in the aforementioned file.
+   */
+  def startScrappersFromConfig(configPath: String = appConfig.get[String]("soxx.scrappers.configFile")) {
+    val configStr =
+      // Very ugly, but scala's file IO support is pretty poor..
+      try {
+        val cfgFile = scala.io.Source.fromFile(configPath)
+        try cfgFile.mkString finally cfgFile.close
+      } catch {
+        case NonFatal(e) =>
+          logger.error(f"Error reading scrapper config file ($configPath): $e")
+          return
+      }
+
+    Toml.parseAsValue[Map[String, ScrapperConfig]](configStr) match {
+      case Right(config) =>
+        config.foreach { case (name, config) =>
+          if (config.enabled) {
+            val scrapperType = config.`type` match {
+              case "old-danbooru" => classOf[OldDanbooruScrapper]
+              case "new-danbooru" => classOf[NewDanbooruScrapper]
+              case "moebooru" => classOf[MoebooruScrapper]
+              case i =>
+                logger.error(f"Unknown type used for imageboard $name: $i, skipping")
+                return
+            }
+
+            context.actorOf(
+              Props(
+                scrapperType,
+                name,
+                config.`base-url`.stripSuffix("/"), // Remove the trailing slash
+                config.favicon,
+                implicitly[WSClient],
+                implicitly[Mongo],
+                implicitly[ExecutionContext]
+              ),
+              f"$name-scrapper"
+            )
+          }
+        }
+      case Left(pE) => logger.error(f"Error reading scrapper config file: $pE")
+    }
+  }
+
+  override def preStart {
     mongo.db
       .getCollection("images")
       .createIndexes(
@@ -40,37 +93,7 @@ class ScrapperSupervisor @Inject()
         }
       )
 
-    // Start scrapper actors
-    Seq(
-      // Old-danbooru-like
-      (classOf[SafebooruScrapper], "safebooru-scrapper"),
-      (classOf[FurrybooruScrapper], "furrybooru-scrapper"),
-
-      // Moebooru-like
-      // They mostly don't give images out to links,
-      // so they need to be downloaded
-      (classOf[KonachanScrapper], "konachan-scrapper"),
-      (classOf[YandereScrapper], "yandere-scrapper"),
-      // (classOf[SakugabooruScrapper], "sakugabooru-scrapper"),
-
-      // New-danbooru-like
-      (classOf[DanbooruScrapper], "danbooru-scrapper")
-    ).foreach { case (scrapperClass, name) =>
-        context.actorOf(
-          Props(
-            scrapperClass,
-            implicitly[WSClient],
-            implicitly[Mongo],
-            implicitly[ExecutionContext]
-          ),
-          name
-        )
-
-        // Names really should be moved into something that is statically accessible
-        // and can be made virtual. This is possible by implementing a trait
-        // and creating companion objects for each class, but that's too
-        // much code for too little benefit
-    }
+    startScrappersFromConfig()
 
     lifecycle.addStopHook { () =>
       Future { context.stop(self) }

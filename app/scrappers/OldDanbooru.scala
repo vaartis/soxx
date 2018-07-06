@@ -7,12 +7,15 @@ import play.api.libs.json._
 
 import soxx.mongowrapper._
 
-abstract class OldDanbooruScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends GenericScrapper {
+class OldDanbooruScrapper(
+  name: String,
+  baseUrl: String,
+  favicon: String
+)(
+  implicit ws: WSClient,
+  mongo: Mongo,
+  ec: ExecutionContext
+) extends GenericScrapper(baseUrl, favicon, name) {
 
   case class OldDanbooruImage(
     id: Int,
@@ -76,27 +79,4 @@ abstract class OldDanbooruScrapper
       )
     )
 
-}
-
-class SafebooruScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends OldDanbooruScrapper {
-
-  override val baseUrl = "https://safebooru.org"
-  override val name = "safebooru"
-}
-
-class FurrybooruScrapper
-  (
-    implicit ws: WSClient,
-    mongo: Mongo,
-    ec: ExecutionContext
-  ) extends OldDanbooruScrapper {
-
-  // Furrybooru doesnt support https
-  override val baseUrl = "http://furry.booru.org"
-  override val name = "furrybooru"
 }
