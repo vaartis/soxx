@@ -31,7 +31,8 @@ abstract class GenericScrapper(
   name: String,
   baseUrl: String,
   favicon: String
-)(implicit ws: WSClient,
+)(
+  implicit ws: WSClient,
   mongo: Mongo,
   ec: ExecutionContext,
 ) extends Actor {
