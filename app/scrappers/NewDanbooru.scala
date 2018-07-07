@@ -2,20 +2,17 @@ package soxx.scrappers
 
 import scala.concurrent._
 
+import play.api.inject.Injector
 import play.api.libs.ws._
 import play.api.libs.json._
-
-import soxx.mongowrapper._
 
 class NewDanbooruScrapper(
   name: String,
   baseUrl: String,
-  favicon: String
-)(
-  implicit ws: WSClient,
-  mongo: Mongo,
-  ec: ExecutionContext
-) extends GenericScrapper(name, baseUrl, favicon) {
+  favicon: String,
+
+  injector: Injector
+) extends GenericScrapper(name, baseUrl, favicon, injector) {
 
   case class NewDanbooruImage(
     id: Int,

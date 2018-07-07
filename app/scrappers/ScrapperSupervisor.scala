@@ -7,8 +7,8 @@ import scala.util.control.NonFatal
 import akka.actor._
 import scala.concurrent._
 import play.api.{Configuration, Logger}
+import play.api.inject.{Injector, ApplicationLifecycle}
 import play.api.libs.ws._
-import play.api.inject.ApplicationLifecycle
 import toml.Toml
 import toml.Codecs._
 
@@ -24,7 +24,8 @@ class ScrapperSupervisor @Inject()
     ws: WSClient,
     mongo: Mongo,
     lifecycle: ApplicationLifecycle,
-    appConfig: Configuration
+    appConfig: Configuration,
+    injector: Injector
   ) extends Actor {
 
   override val supervisorStrategy = (new StoppingSupervisorStrategy).create()
@@ -66,9 +67,7 @@ class ScrapperSupervisor @Inject()
                 name,
                 config.`base-url`.stripSuffix("/"), // Remove the trailing slash
                 config.favicon,
-                implicitly[WSClient],
-                implicitly[Mongo],
-                implicitly[ExecutionContext]
+                injector
               ),
               f"$name-scrapper"
             )

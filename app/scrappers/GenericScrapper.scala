@@ -10,6 +10,7 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.actor._
+import play.api.inject.Injector
 import play.api.libs.json._
 import play.api.libs.ws._
 import play.api.Logger
@@ -30,12 +31,14 @@ import org.mongodb.scala.model.Filters._
 abstract class GenericScrapper(
   name: String,
   baseUrl: String,
-  favicon: String
-)(
-  implicit ws: WSClient,
-  mongo: Mongo,
-  ec: ExecutionContext,
+  favicon: String,
+
+  injector: Injector
 ) extends Actor {
+
+  // Injected stuff
+  protected implicit val (ws, mongo, ec) =
+    (injector.instanceOf[WSClient], injector.instanceOf[Mongo], injector.instanceOf[ExecutionContext])
 
   /** Defines the structure of the image returned by the imageboard.
     *
