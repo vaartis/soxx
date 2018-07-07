@@ -24,6 +24,12 @@ To actually run this, you'll need to:
 2. Install MongoDB, make it a cluster in the settings and start it
 3. Run `sbt` and then put `run` in there to start the dev environment
 
+# Contributions
+
+All contributions in any JVM language are welcome! This project may
+not be scala-only if there are people interested in it but they also
+don't want to learn scala (as it is pretty complex!).
+
 # Screenshots
 
 That's how the image embded in the search page looks right now (all pictures
