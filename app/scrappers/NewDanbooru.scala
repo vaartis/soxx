@@ -15,7 +15,7 @@ class NewDanbooruScrapper(
   implicit ws: WSClient,
   mongo: Mongo,
   ec: ExecutionContext
-) extends GenericScrapper(baseUrl, favicon, name) {
+) extends GenericScrapper(name, baseUrl, favicon) {
 
   case class NewDanbooruImage(
     id: Int,
