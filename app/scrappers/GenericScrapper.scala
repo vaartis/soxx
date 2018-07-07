@@ -92,6 +92,8 @@ abstract class GenericScrapper(
     */
   def scrapperImageToImage(img: ScrapperImage): Option[Image]
 
+  private val imageCollection = mongo.db.getCollection[Image]("images")
+
   protected final var materializer: Option[ActorMaterializer] = None
   protected final var downloadMaterializer: Option[ActorMaterializer] = None
 
@@ -105,8 +107,6 @@ abstract class GenericScrapper(
         // Create the directory to store images in..
         Files.createDirectories(imagesDir)
       }
-
-      val imageCollection = mongo.db.getCollection[Image]("images")
 
       Source
         .fromFuture(

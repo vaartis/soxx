@@ -39,6 +39,8 @@ class AdminPanelActor(out: ActorRef)(
 
   implicit val actorResolveTimeout: Timeout = 5 seconds
 
+  private val imageCollection = mongo.db.getCollection("images")
+
   override def preStart = {
     mongo.db
       .getCollection[BoardInfo]("imboard_info")
@@ -75,7 +77,6 @@ class AdminPanelActor(out: ActorRef)(
           import org.mongodb.scala.model.Updates.combine
 
           val data = msg.as[ImboardCountersMsg]
-          val imageCollection = mongo.db.getCollection("images")
 
           def getAndSendData {
                 for (
