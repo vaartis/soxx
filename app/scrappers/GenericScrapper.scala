@@ -106,11 +106,10 @@ abstract class GenericScrapper(
         Files.createDirectories(imagesDir)
       }
 
-      val imageCollection = mongo.db.getCollection[Image]("images")
-
       Source
         .fromFuture(
-          imageCollection
+          mongo.db
+            .getCollection[Image]("images")
             .find(combine(
               equal("metadataOnly", true),
               Document("from" -> Document("$elemMatch" -> Document("name" -> name)))
@@ -119,7 +118,9 @@ abstract class GenericScrapper(
         )
         .mapConcat { _.to[collection.immutable.Iterable] }
         .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
-          def setMetatadaOnlyFalse() = imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
+          def setMetatadaOnlyFalse() = mongo.db
+            .getCollection[Image]("images")
+            .updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
 
           val savePath = Paths.get(f"images/${image.md5}${image.extension}")
 
@@ -131,7 +132,7 @@ abstract class GenericScrapper(
             // Actually download the image
             ws.url(image.from.head.image).get()
               .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
-              .flatMap { case IOResult(_, Success(Done)) => imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
+              .flatMap { case IOResult(_, Success(Done)) => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
               .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
           }
         }
@@ -149,12 +150,10 @@ abstract class GenericScrapper(
       implicit val actualMaterializer = ActorMaterializer()(context)
       materializer = Some(actualMaterializer)
 
-      val imageCollection = mongo.db.getCollection[Image]("images")
-      val imboardInfoCollection = mongo.db.getCollection[BoardInfo]("imboard_info")
-
       getImageCount
         .map { imageCount =>
-          imboardInfoCollection
+          mongo.db
+            .getCollection[BoardInfo]("imboard_info")
             .updateOne(equal("_id", name), set("reportedImageCount", imageCount))
             .toFuture // Save the reported image count and ignore the result
 
@@ -179,7 +178,7 @@ abstract class GenericScrapper(
                 .collect { case Some(i) => i } // Filter out all None's and return images
                 .map { img =>
                   // If it's a new picture
-                  if (Await.result(imageCollection.find(equal("md5", img.md5)).toFuture(), 5 seconds).isEmpty) {
+                  if (Await.result(mongo.db.getCollection[Image]("images").find(equal("md5", img.md5)).toFuture(), 5 seconds).isEmpty) {
                     InsertOneModel(img)
                   } else {
                     UpdateOneModel(
@@ -201,7 +200,8 @@ abstract class GenericScrapper(
                   }
                 }
 
-              imageCollection
+              mongo.db
+                .getCollection[Image]("images")
                 .bulkWrite(operations, BulkWriteOptions().ordered(false))
                 .toFuture
                 .onComplete {
