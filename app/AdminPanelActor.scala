@@ -86,7 +86,7 @@ class AdminPanelActor(out: ActorRef)(
           // notifications..
           //
           // FIXME: make something better, this is just ugly
-          def getAndSendData = Helpers.debounce(1.second){ _: Unit =>
+          def getAndSendData_ = { _: Unit =>
             mongo.db
               .getCollection("images")
               .aggregate(Seq(
@@ -117,6 +117,7 @@ class AdminPanelActor(out: ActorRef)(
                 )
               }
           }
+          val getAndSendData = Helpers.debounce(1.second)(getAndSendData_)
 
           mongo.db
             .getCollection("images")
