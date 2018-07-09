@@ -79,8 +79,8 @@ class AdminPanelActor(out: ActorRef)(
 
           def getAndSendData {
                 for (
-                  indexedImageCount <- imageCollection.count(Document("from" -> Document("$elemMatch" -> Document("name" -> data.imboard))));
-                  downloadedImageCount <- imageCollection.count(
+                  indexedImageCount <-  imageCollection.countDocuments(Document("from" -> Document("$elemMatch" -> Document("name" -> data.imboard))));
+                  downloadedImageCount <- imageCollection.countDocuments(
                     combine(
                       equal("metadataOnly", false),
                       Document("from" -> Document("$elemMatch" -> Document("name" -> data.imboard)))

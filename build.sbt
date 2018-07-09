@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
   ws,
 
 
-  "org.mongodb.scala" %% "mongo-scala-driver" % "2.2.1",
+  "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.0",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",
 
   "tech.sparse" %%  "toml-scala" % "0.1.2-SNAPSHOT"

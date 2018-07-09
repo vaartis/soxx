@@ -108,7 +108,7 @@ class APIv1Controller @Inject()
         val mongoSearchQuery = if (searchQuery.isEmpty) { Document() } else { and(searchQuery:_*) }
 
         imageCollection
-          .count(mongoSearchQuery)
+          .countDocuments(mongoSearchQuery)
           .toFuture()
           .flatMap { foundImageCount =>
             imageCollection.find(mongoSearchQuery)
