@@ -79,7 +79,6 @@ class AdminPanelActor(out: ActorRef)(
           import soxx.helpers.Helpers
 
           val data = msg.as[ImboardCountersMsg]
-          val imageCollection = mongo.db.getCollection("images")
 
           // Junky syntax here, so that on type level it seems like
           // the function accecpts something of type Unit, but it actually ignores it since there's no such value
@@ -88,7 +87,8 @@ class AdminPanelActor(out: ActorRef)(
           //
           // FIXME: make something better, this is just ugly
           def getAndSendData = Helpers.debounce(1.second){ _: Unit =>
-            imageCollection
+            mongo.db
+              .getCollection("images")
               .aggregate(Seq(
                 `match`(elemMatch("from", equal("name", data.imboard))),
                 facet(
@@ -118,7 +118,8 @@ class AdminPanelActor(out: ActorRef)(
               }
           }
 
-          imageCollection
+          mongo.db
+            .getCollection("images")
             .watch()
             .foreach { change => if (change.getOperationType != OperationType.INVALIDATE) getAndSendData(()) }
 
