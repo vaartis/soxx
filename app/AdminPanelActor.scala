@@ -71,38 +71,58 @@ class AdminPanelActor(out: ActorRef)(
       (msg \ "tp").as[String] match {
         case "sub-to-image-counters" =>
           import org.mongodb.scala._
+          import org.mongodb.scala.model.Facet
           import org.mongodb.scala.model.Filters._
+          import org.mongodb.scala.model.Aggregates.{ out => _, _ }
           import org.mongodb.scala.model.Updates.combine
+
+          import soxx.helpers.Helpers
 
           val data = msg.as[ImboardCountersMsg]
           val imageCollection = mongo.db.getCollection("images")
 
-          def getAndSendData {
-                for (
-                  indexedImageCount <-  imageCollection.countDocuments(Document("from" -> Document("$elemMatch" -> Document("name" -> data.imboard))));
-                  downloadedImageCount <- imageCollection.countDocuments(
-                    combine(
-                      equal("metadataOnly", false),
-                      Document("from" -> Document("$elemMatch" -> Document("name" -> data.imboard)))
-                    )
-                  )
-                ) {
-                  out ! Json.obj(
-                    "tp" -> "image-counters-updated",
-                    "imboard" -> data.imboard,
-                    "value" -> Json.obj(
-                      "indexedImageCount" -> indexedImageCount,
-                      "downloadedImageCount" -> downloadedImageCount
-                    )
-                  )
+          // Junky syntax here, so that on type level it seems like
+          // the function accecpts something of type Unit, but it actually ignores it since there's no such value
+          // This function is then throttled to only work once every second since mongodb sends a lot of
+          // notifications..
+          //
+          // FIXME: make something better, this is just ugly
+          def getAndSendData = Helpers.debounce(1.second){ _: Unit =>
+            imageCollection
+              .aggregate(Seq(
+                `match`(elemMatch("from", equal("name", data.imboard))),
+                facet(
+                  Facet("indexed", count("value")),
+                  Facet("downloaded", `match`(equal("metadataOnly", false)), count("value"))
+                )
+              ))
+              .foreach { doc =>
+                // FIXME: ouch, do something with that ugly decoding stuff
+                val indexedCount = {
+                  val arr = doc("indexed").asArray()
+                  if (arr.size > 0) { arr.get(0).asDocument()("value").asInt32.intValue } else { 0 }
                 }
+                val downloadedCount = {
+                  val arr = doc("downloaded").asArray()
+                  if (arr.size > 0) { arr.get(0).asDocument()("value").asInt32.intValue } else { 0 }
+                }
+
+                out ! Json.obj(
+                  "tp" -> "image-counters-updated",
+                  "imboard" -> data.imboard,
+                  "value" -> Json.obj(
+                    "indexedImageCount" -> indexedCount,
+                    "downloadedImageCount" -> downloadedCount
+                  )
+                )
+              }
           }
 
           imageCollection
             .watch()
-            .foreach { change => if (change.getOperationType != OperationType.INVALIDATE) getAndSendData }
+            .foreach { change => if (change.getOperationType != OperationType.INVALIDATE) getAndSendData(()) }
 
-          getAndSendData
+          getAndSendData(())
 
         case "imboard-scrapper-status" =>
           val data = msg.as[IsIndexingMsg]
