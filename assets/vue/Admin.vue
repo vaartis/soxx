@@ -26,10 +26,10 @@
                 </table>
 
                 <div v-if="imboard.reportedImageCount && imboard.indexedImageCount" class="card-index-progressbar">
-                    <b>{{ findPercent(imboard.reportedImageCount, imagesToPages(imboard.indexedImageCount, imboard.pageSize)).toFixed(2) }}%</b>
+                    <b>{{ findPercent(imboard.reportedImageCount, imboard.indexedImageCount).toFixed(2) }}%</b>
                     <div class="progress" >
                         <div class="progress-bar" role="progressbar"
-                             v-bind:style="{width: findPercent(imboard.reportedImageCount, imagesToPages(imboard.indexedImageCount, imboard.pageSize)) + '%'}">
+                             v-bind:style="{width: findPercent(imboard.reportedImageCount, imboard.indexedImageCount) + '%'}">
                         </div>
                     </div>
                 </div>
