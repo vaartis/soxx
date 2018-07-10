@@ -12,7 +12,6 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 val theScalaVersion = "2.12.4"
 
 scalaVersion := theScalaVersion
-ensimeScalaVersion in ThisBuild := theScalaVersion
 
 scalacOptions ++= Seq(
   "-feature",
