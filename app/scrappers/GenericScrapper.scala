@@ -116,16 +116,17 @@ abstract class GenericScrapper(
       ) {
         Source(imagesToDownload.to[collection.immutable.Iterable])
           .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
-          def setMetatadaOnlyFalse() = mongo.db
-            .getCollection[Image]("images")
-            .updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
 
           val savePath = Paths.get(f"images/${image.md5}${image.extension}")
 
           if (Files.exists(savePath)) {
             // Just update the metadata
             // This is needed if several imageboards have the same image
-            setMetatadaOnlyFalse().map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
+            mongo.db
+              .getCollection[Image]("images")
+              .updateOne(equal("_id", image._id), set("metadataOnly", false))
+              .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
+              .toFuture
           } else {
             // Actually download the image
             ws.url(image.from.head.image).get()
