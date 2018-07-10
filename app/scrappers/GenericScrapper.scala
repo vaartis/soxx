@@ -106,18 +106,16 @@ abstract class GenericScrapper(
         Files.createDirectories(imagesDir)
       }
 
-      Source
-        .fromFuture(
-          mongo.db
-            .getCollection[Image]("images")
-            .find(combine(
-              equal("metadataOnly", true),
-              equal("from.name", name)
-            )) // Find the images that only have metadata
-            .toFuture
-        )
-        .mapConcat { _.to[collection.immutable.Iterable] }
-        .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
+      for (
+        imagesToDownload <-
+        mongo.db
+        .getCollection[Image]("images").find(combine(
+          equal("metadataOnly", true), // Find the images that only have metadata
+          equal("from.name", name)
+        )).toFuture
+      ) {
+        Source(imagesToDownload.to[collection.immutable.Iterable])
+          .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
           def setMetatadaOnlyFalse() = mongo.db
             .getCollection[Image]("images")
             .updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
@@ -142,6 +140,7 @@ abstract class GenericScrapper(
             stopDownloading()
             logger.info("Finished downloading")
         }
+      }
     }
   }
 
