@@ -117,29 +117,29 @@ abstract class GenericScrapper(
         Source(imagesToDownload.to[collection.immutable.Iterable])
           .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
 
-          val savePath = Paths.get(f"images/${image.md5}${image.extension}")
+            val savePath = Paths.get(f"images/${image.md5}${image.extension}")
 
-          if (Files.exists(savePath)) {
-            // Just update the metadata
-            // This is needed if several imageboards have the same image
-            mongo.db
-              .getCollection[Image]("images")
-              .updateOne(equal("_id", image._id), set("metadataOnly", false))
-              .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
-              .toFuture
-          } else {
-            // Actually download the image
-            ws.url(image.from.head.image).get()
-              .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
-              .flatMap { case IOResult(_, Success(Done)) => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
-              .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
+            if (Files.exists(savePath)) {
+              // Just update the metadata
+              // This is needed if several imageboards have the same image
+              mongo.db
+                .getCollection[Image]("images")
+                .updateOne(equal("_id", image._id), set("metadataOnly", false))
+                .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
+                .toFuture
+            } else {
+              // Actually download the image
+              ws.url(image.from.head.image).get()
+                .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
+                .flatMap { case IOResult(_, Success(Done)) => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
+                .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
+            }
           }
-        }
-        .runWith(Sink.ignore)
-        .andThen {
-          case Success(_) =>
-            stopDownloading()
-            logger.info("Finished downloading")
+          .runWith(Sink.ignore)
+          .andThen {
+            case Success(_) =>
+              stopDownloading()
+              logger.info("Finished downloading")
         }
       }
     }
