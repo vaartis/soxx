@@ -1,9 +1,9 @@
 package soxx.helpers
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.compat.Platform.{currentTime => now}
 import scala.concurrent.duration.FiniteDuration
-
-import java.util.concurrent.atomic.AtomicBoolean
+import scala.util.Try
 
 object Helpers {
   // Taken from https://gist.github.com/pathikrit/79ad500a6b31f62ab4e8
@@ -34,4 +34,12 @@ object Helpers {
       }
     }
   }
+
+  /** Read a file into an Either.
+    */
+  def readFile(filePath: String): Either[Throwable, String] =
+    Try {
+      val cfgFile = scala.io.Source.fromFile(filePath)
+      try cfgFile.mkString finally cfgFile.close
+    }.toEither
 }

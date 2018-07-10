@@ -16,6 +16,7 @@ import org.mongodb.scala._
 import org.mongodb.scala.model._
 
 import soxx.mongowrapper._
+import soxx.helpers.Helpers
 
 @Singleton
 class ScrapperSupervisor @Inject()
@@ -37,18 +38,9 @@ class ScrapperSupervisor @Inject()
    * found in the aforementioned file.
    */
   def startScrappersFromConfig(configPath: String = appConfig.get[String]("soxx.scrappers.configFile")) {
-    val configStr =
-      // Very ugly, but scala's file IO support is pretty poor..
-      try {
-        val cfgFile = scala.io.Source.fromFile(configPath)
-        try cfgFile.mkString finally cfgFile.close
-      } catch {
-        case NonFatal(e) =>
-          logger.error(f"Error reading scrapper config file ($configPath): $e")
-          return
-      }
-
-    Toml.parseAsValue[Map[String, ScrapperConfig]](configStr) match {
+    Helpers
+      .readFile(configPath)
+      .flatMap(Toml.parseAsValue[Map[String, ScrapperConfig]](_)) match {
       case Right(config) =>
         config.foreach { case (name, config) =>
           if (config.enabled) {
