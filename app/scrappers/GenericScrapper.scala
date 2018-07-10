@@ -158,13 +158,12 @@ abstract class GenericScrapper(
             .toFuture // Save the reported image count and ignore the result
 
           // Get the page count from the image count and page size
-          imageCount / pageSize
-        }
-        .map { pagesCount =>
+          val pageCount = imageCount / pageSize
+
           // Limit to `toPage` if needed
           toPage match {
-              case Some(toPage) => if (pagesCount < toPage) { pagesCount } else { toPage }
-              case None => pagesCount
+            case Some(toPage) => if (pageCount < toPage) { pageCount } else { toPage }
+            case None => pageCount
           }
         }
         .flatMap { pagesCount =>
