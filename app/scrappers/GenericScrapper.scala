@@ -150,29 +150,31 @@ abstract class GenericScrapper(
       implicit val actualMaterializer = ActorMaterializer()(context)
       materializer = Some(actualMaterializer)
 
-      getImageCount
-        .map { imageCount =>
-          mongo.db
-            .getCollection[BoardInfo]("imboard_info")
-            .updateOne(equal("_id", name), set("reportedImageCount", imageCount))
-            .toFuture // Save the reported image count and ignore the result
+      for (
+        imageCount <- getImageCount;
+        _ <- mongo.db.getCollection[BoardInfo]("imboard_info").updateOne(equal("_id", name), set("reportedImageCount", imageCount)).toFuture
+      ) {
+        logger.info(f"Updated reported image count to $imageCount")
 
+        val pageCount = {
           // Get the page count from the image count and page size
           val pageCount = imageCount / pageSize
 
           // Limit to `toPage` if needed
           toPage match {
-            case Some(toPage) => if (pageCount < toPage) { pageCount } else { toPage }
+            // If the pageCount is less, then just use it, otherwise use toPage
+            case Some(toPage) => Math.min(pageCount, toPage)
             case None => pageCount
           }
         }
-        .flatMap { pagesCount =>
-          logger.info(f"Total page count: ${pagesCount}")
+        logger.info(f"Total page count: ${pageCount}")
 
-          Source(fromPage to (pagesCount + 1))
-            .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
-            .runForeach { case (scrapperImages, currentPage) =>
-              val operations = scrapperImages
+        Source(fromPage to (pageCount + 1))
+          // Download pages
+          .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
+          .map { case (scrapperImages, currentPage) => // Again, page here is needed downstream..
+            val operations =
+              scrapperImages
                 .map(scrapperImageToImage)
                 .collect { case Some(i) => i } // Filter out all None's and return images
                 .map { img =>
@@ -198,27 +200,26 @@ abstract class GenericScrapper(
                     )
                   }
                 }
-
-              mongo.db
-                .getCollection[Image]("images")
-                .bulkWrite(operations, BulkWriteOptions().ordered(false))
-                .toFuture
-                .onComplete {
-                  case Success(_) => logger.info(s"Finished page ${currentPage}")
-                  case Failure(e) => logger.error(s"Error processing page ${currentPage}: $e")
-                }
-            }
-            .recover {
-              case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
-            }
-        }
-        .andThen {
-          case Success(_) =>
-            stopIndexing()
-            logger.info("Scrapping finished")
-        }
+            (operations, currentPage)
+          }
+          .mapAsyncUnordered(maxPageFetchingConcurrency) { case (operations, currentPage) =>
+            mongo.db
+              .getCollection[Image]("images")
+              .bulkWrite(operations, BulkWriteOptions().ordered(false))
+              .toFuture.map { r => (r, currentPage) }
+          }
+          .runForeach { case (res, currentPage) if res.wasAcknowledged => logger.info(s"Finished page ${currentPage}") }
+          .recover {
+            case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
+          }
+      }.andThen {
+        case Success(_) =>
+          stopIndexing()
+          logger.info("Scrapping finished")
+      }
     }
   }
+
 
   protected final def stopIndexing(): Unit = {
     materializer.foreach { mat =>
