@@ -112,7 +112,7 @@ abstract class GenericScrapper(
             .getCollection[Image]("images")
             .find(combine(
               equal("metadataOnly", true),
-              Document("from" -> Document("$elemMatch" -> Document("name" -> name)))
+              equal("from.name", name)
             )) // Find the images that only have metadata
             .toFuture
         )

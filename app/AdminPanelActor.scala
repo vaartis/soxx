@@ -90,7 +90,7 @@ class AdminPanelActor(out: ActorRef)(
             mongo.db
               .getCollection("images")
               .aggregate(Seq(
-                `match`(elemMatch("from", equal("name", data.imboard))),
+                `match`(equal("from.name", data.imboard)),
                 facet(
                   Facet("indexed", count("value")),
                   Facet("downloaded", `match`(equal("metadataOnly", false)), count("value"))
