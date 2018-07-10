@@ -32,5 +32,7 @@ libraryDependencies ++= Seq(
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.0",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",
 
+  "io.minio" % "minio" % "4.0.2",
+
   "tech.sparse" %%  "toml-scala" % "0.1.2-SNAPSHOT"
 )

@@ -10,17 +10,18 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.actor._
+import akka.pattern.ask
 import play.api.inject.Injector
 import play.api.libs.json._
 import play.api.libs.ws._
-import play.api.Logger
-
-import soxx.mongowrapper._
+import play.api.{ Logger, Configuration }
 import org.mongodb.scala._
 import org.mongodb.scala.model._
 import com.mongodb.client.result.UpdateResult
 import org.mongodb.scala.model.Updates._
 import org.mongodb.scala.model.Filters._
+
+import soxx.mongowrapper._
 
 /** A base for all scrappers.
  *
@@ -37,8 +38,8 @@ abstract class GenericScrapper(
 ) extends Actor {
 
   // Injected stuff
-  protected implicit val (ws, mongo, ec) =
-    (injector.instanceOf[WSClient], injector.instanceOf[Mongo], injector.instanceOf[ExecutionContext])
+  protected implicit val (ws, mongo, ec, config) =
+    (injector.instanceOf[WSClient], injector.instanceOf[Mongo], injector.instanceOf[ExecutionContext], injector.instanceOf[Configuration])
 
   /** Defines the structure of the image returned by the imageboard.
     *
@@ -85,6 +86,8 @@ abstract class GenericScrapper(
     */
   def getPageImagesAndCurrentPage(page: Int): Future[(Seq[ScrapperImage], Int)]
 
+  implicit val akkaTimeout = akka.util.Timeout(5.seconds)
+
   /** Converts the internal image to the actual image used in the database.
     *
     * This function should set the [[Image.from]] field to a [[scala.collection.Seq]] with a single element:
@@ -100,12 +103,6 @@ abstract class GenericScrapper(
       implicit val actualMaterializer = ActorMaterializer()(context)
       downloadMaterializer = Some(actualMaterializer)
 
-      val imagesDir = Paths.get("images", name)
-      if (Files.notExists(imagesDir)) {
-        // Create the directory to store images in..
-        Files.createDirectories(imagesDir)
-      }
-
       for (
         imagesToDownload <-
         mongo.db
@@ -119,22 +116,62 @@ abstract class GenericScrapper(
         Source(imagesToDownload.to[collection.immutable.Iterable])
           .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
 
-            val savePath = Paths.get(f"images/${image.md5}${image.extension}")
+            val imageName = f"${image.md5}${image.extension}"
 
-            if (Files.exists(savePath)) {
-              // Just update the metadata
-              // This is needed if several imageboards have the same image
-              mongo.db
-                .getCollection[Image]("images")
-                .updateOne(equal("_id", image._id), set("metadataOnly", false))
-                .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
-                .toFuture
+            // Just update the metadata
+            // This is needed if several imageboards have the same image
+            def updateMetadataOnlyFalse() =
+                mongo.db
+                  .getCollection[Image]("images")
+                  .updateOne(equal("_id", image._id), set("metadataOnly", false))
+                  .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
+                  .toFuture
+
+            if (config.get[Boolean]("soxx.s3.enabled")) {
+              import soxx.s3._
+
+              for (
+                s3Uploader <- context.actorSelection(context.system / "s3-uploader").resolveOne(5.seconds);
+                imageExistsInS3_ <- s3Uploader ? ImageExists(imageName)
+              ) yield {
+                val exists = imageExistsInS3_.asInstanceOf[Boolean]
+
+                if (exists) {
+                  updateMetadataOnlyFalse()
+                } else {
+                  ws.url(image.from.head.image).get()
+                    .map { resp =>
+                      val stream = resp.bodyAsSource.runWith(StreamConverters.asInputStream(5.seconds))
+                      val size = resp.body.length
+                      val contentType = resp.contentType
+
+                      // Start uploading image and update the metadataOnly mark
+                      // No logging here since the uploader logs things already
+                      s3Uploader
+                        .ask(UploadImage(imageName, stream, size, contentType))
+                        .flatMap {
+                          case true => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
+                        }
+                    }
+                }
+              }
             } else {
-              // Actually download the image
-              ws.url(image.from.head.image).get()
-                .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
-                .flatMap { case IOResult(_, Success(Done)) => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
-                .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
+              val imagesDir = Paths.get("images")
+              if (Files.notExists(imagesDir)) {
+                // Create the directory to store images in..
+                Files.createDirectories(imagesDir)
+              }
+
+              val savePath = Paths.get(f"images/$imageName")
+              if (Files.exists(savePath)) {
+                updateMetadataOnlyFalse()
+              } else {
+                // Actually download the image
+                ws.url(image.from.head.image).get()
+                  .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
+                  .flatMap { case IOResult(_, Success(Done)) => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
+                  .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
+              }
             }
           }
           .runWith(Sink.ignore)
