@@ -10,9 +10,26 @@ import io.minio.{ MinioClient, ErrorCode }
 import io.minio.errors.ErrorResponseException
 import akka.actor._
 
+/** Request image uploading to S3.
+  *
+  * The `inputStream` needs to be closed manually after receiving
+  * the response from this message (true means the image was uploaded successfully).
+*/
 case class UploadImage(name: String, inputStream: InputStream, size: Long, contentType: String)
+
+/** Ask the S3 service if the image is already uploaded.
+  *
+  * Sends true if the image exists, false otherwie.
+ */
 case class ImageExists(name: String)
 
+/** Handles image uploading to S3-compaitable services.
+  *
+  * Uses the Minio client library.
+  *
+  * Starts conditionally if the `soxx.s3.enabled` in the application.conf
+  * is set to `true`. It also handles bucket creation automatically.
+  */
 @Singleton
 class S3Uploader @Inject() (config: Configuration) extends Actor {
   val logger = Logger(this.getClass)
