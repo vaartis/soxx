@@ -34,7 +34,7 @@ class APIv1Controller @Inject()
 
   implicit val actorResolveTimeout: Timeout = 5 seconds
 
-  val scrapperSupervisor = Await.result(
+  lazy val scrapperSupervisor = Await.result(
     system
       .actorSelection(system / "scrapper-supervisor")
       .resolveOne(),
