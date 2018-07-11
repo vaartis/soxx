@@ -130,31 +130,41 @@ abstract class GenericScrapper(
             if (config.get[Boolean]("soxx.s3.enabled")) {
               import soxx.s3._
 
-              for (
-                s3Uploader <- context.actorSelection(context.system / "s3-uploader").resolveOne(5.seconds);
-                imageExistsInS3_ <- s3Uploader ? ImageExists(imageName)
-              ) yield {
-                val exists = imageExistsInS3_.asInstanceOf[Boolean]
 
-                if (exists) {
-                  updateMetadataOnlyFalse()
-                } else {
-                  ws.url(image.from.head.image).get()
-                    .map { resp =>
-                      val stream = resp.bodyAsSource.runWith(StreamConverters.asInputStream(5.seconds))
-                      val size = resp.body.length
-                      val contentType = resp.contentType
+              context
+                .actorSelection(context.system / "s3-uploader")
+                .resolveOne(5.seconds)
+                .flatMap { s3Uploader => (s3Uploader ? ImageExists(imageName)).map { a => (s3Uploader, a) } }
+                .flatMap { case (s3Uploader, exists_) =>
+                  val exists = exists_.asInstanceOf[Boolean]
+                  if (exists) {
+                    updateMetadataOnlyFalse()
+                  } else {
+                    ws.url(image.from.head.image)
+                      .get()
+                      .flatMap { resp =>
+                        val stream = resp.bodyAsSource.runWith(StreamConverters.asInputStream(5.seconds))
+                        val size = resp.body.length
+                        val contentType = resp.contentType
 
-                      // Start uploading image and update the metadataOnly mark
-                      // No logging here since the uploader logs things already
-                      s3Uploader
-                        .ask(UploadImage(imageName, stream, size, contentType))
-                        .flatMap {
-                          case true => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
-                        }
-                    }
+                        // Start uploading image and update the metadataOnly mark
+                        // No logging here since the uploader logs things already
+                        s3Uploader
+                          .ask(UploadImage(imageName, stream, size, contentType))
+                          .flatMap {
+                            case true =>
+                              stream.close()
+
+                              mongo.db.getCollection[Image]("images")
+                                .updateOne(
+                                  equal("_id", image._id),
+                                    set("metadataOnly", false),
+                                )
+                                .toFuture
+                          }
+                      }
+                  }
                 }
-              }
             } else {
               val imagesDir = Paths.get("images")
               if (Files.notExists(imagesDir)) {
