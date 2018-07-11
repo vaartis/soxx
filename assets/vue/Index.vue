@@ -107,7 +107,17 @@
          },
 
          genImgLink(image) {
-             let link = image.metadataOnly ? image.from[0].image : `/image_files/${image.md5}${image.extension}`;
+             let link = null;
+
+             if (image.metadataOnly) {
+                 link = image.from ? image.from[0].image : null;
+             } else {
+                 if (image.s3) {
+                     link = image.s3url;
+                 } else {
+                     link = `/image_files/${image.md5}${image.extension}`;
+                 }
+             }
 
              return { backgroundImage: `url(${link})` };
          }
