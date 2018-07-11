@@ -71,8 +71,7 @@ class OldDanbooruScrapper(
             thumbnail = f"${baseUrl}/thumbnails/${img.directory}/thumbnail_${img.image}"
           )
         ),
-        extension = img.image.substring(img.image.lastIndexOf('.')),
-        metadataOnly = true
+        extension = img.image.substring(img.image.lastIndexOf('.'))
       )
     )
 

@@ -130,6 +130,11 @@ abstract class GenericScrapper(
             if (config.get[Boolean]("soxx.s3.enabled")) {
               import soxx.s3._
 
+              val (region, endpoint, bucketName) = (
+                config.getOptional[String]("soxx.s3.region"),
+                config.get[String]("soxx.s3.endpoint"),
+                config.get[String]("soxx.s3.bucket-name"),
+              )
 
               context
                 .actorSelection(context.system / "s3-uploader")
@@ -158,7 +163,11 @@ abstract class GenericScrapper(
                               mongo.db.getCollection[Image]("images")
                                 .updateOne(
                                   equal("_id", image._id),
+                                  combine(
                                     set("metadataOnly", false),
+                                    set("s3", true),
+                                    set("s3url", f"""${region.map(_ + '.').getOrElse("")}$endpoint/$bucketName/$imageName""")
+                                  )
                                 )
                                 .toFuture
                           }
