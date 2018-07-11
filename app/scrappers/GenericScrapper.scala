@@ -111,7 +111,7 @@ abstract class GenericScrapper(
           equal("from.name", name)
         )).toFuture
       ) {
-        logger.info(f"Images to download: $imagesToDownload")
+        logger.info(f"Images to download: ${imagesToDownload.length}")
 
         Source(imagesToDownload.to[collection.immutable.Iterable])
           .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
