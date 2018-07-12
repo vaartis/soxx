@@ -45,11 +45,7 @@ class OldDanbooruScrapper(
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[OldDanbooruImage], Int)] =
     ws
-      .url(s"${baseUrl}/${apiAddition}")
-      .addQueryStringParameters(
-        ("pid", currentPage.toString),
-        ("json", "1")
-      )
+      .url(s"${baseUrl}/${apiAddition}&pid=${currentPage.toString}&json=1")
       .get()
       .map { res => (res.json.as[Seq[OldDanbooruImage]], currentPage) }
 
