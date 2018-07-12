@@ -271,6 +271,7 @@ abstract class GenericScrapper(
           .runForeach { case (res, currentPage) if res.wasAcknowledged => logger.info(s"Finished page ${currentPage}") }
           .recover {
             case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
+            case x => logger.error(f"Scrapping error: $x")
           }
       }.andThen {
         case Success(_) =>
