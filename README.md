@@ -13,8 +13,9 @@ This project is done in Scala+Play+Akka, because I like actors and erlang :P
 Please do suggest things and feel free to fork and contribute. Documentation
 is a little lacking at the moment, but i will try to make it better in the future.
 
-Support for amazon s3 compaitable storage is also planned. As of now,
-images are indexed and you can then download them because indexing is much faster.
+There's support for uploading images to S3-compaitable services, it is optional
+and is disabled by default, but can be enabled and configured in application.conf.
+As of now, images are indexed and you can then download them because indexing is much faster.
 
 The tests will also be probably set up where appropriate.
 
