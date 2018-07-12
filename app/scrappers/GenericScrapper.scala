@@ -229,7 +229,7 @@ abstract class GenericScrapper(
         }
         logger.info(f"Total page count: ${pageCount}")
 
-        Source(fromPage to (pageCount + 1))
+        Source(fromPage to pageCount)
           // Download pages
           .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
           .map { case (scrapperImages, currentPage) => // Again, page here is needed downstream..
