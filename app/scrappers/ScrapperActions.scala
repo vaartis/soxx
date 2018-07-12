@@ -8,7 +8,7 @@ case object StartDownloading extends ScrapperAction
 case object StopDownloading extends ScrapperAction
 
 case object ScrapperStatusMsg extends ScrapperAction
-case class ScrapperStatus(isIndexing: Boolean, isDownloading: Boolean)
+case class ScrapperStatus(imboard: String, isIndexing: Boolean, isDownloading: Boolean)
 object ScrapperStatus {
   implicit val spStatusFormat = play.api.libs.json.Json.format[ScrapperStatus]
 }

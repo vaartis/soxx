@@ -67,6 +67,13 @@ class AdminPanelActor(out: ActorRef)(
   }
 
   override def receive = {
+    case status @ ScrapperStatus(imboard, _, _) =>
+      out ! Json.obj(
+        "tp" -> "imboard-scrapper-status",
+        "imboard" -> imboard,
+        "value" -> Json.toJson(status)
+      )
+
     case msg: JsObject =>
       (msg \ "tp").as[String] match {
         case "sub-to-image-counters" =>
@@ -129,19 +136,11 @@ class AdminPanelActor(out: ActorRef)(
         case "imboard-scrapper-status" =>
           val data = msg.as[IsIndexingMsg]
 
-          system
-            .actorSelection(system / "scrapper-supervisor" / f"${data.imboard}-scrapper")
-            .resolveOne
-            .flatMap { case actorRef =>
-              actorRef ? ScrapperStatusMsg
-            }
-            .andThen { case Success(scrapperStatus) =>
-              out ! Json.obj(
-                "tp" -> "imboard-scrapper-status",
-                "imboard" -> data.imboard,
-                "value" -> Json.toJson(scrapperStatus.asInstanceOf[ScrapperStatus])
-              )
-            }
+          for (imboardScrapper <- system.actorSelection(system / "scrapper-supervisor" / f"${data.imboard}-scrapper").resolveOne) {
+            // Ask the status, it will send ScrapperStatus back and
+            // it will be handled by another match arm
+            imboardScrapper ! ScrapperStatusMsg
+          }
         case "imboard-scrapper-action" =>
           val data = msg.as[ScrapperActionMsg]
 

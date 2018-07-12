@@ -23,6 +23,8 @@ import org.mongodb.scala.model.Filters._
 
 import soxx.mongowrapper._
 
+case class SenderRef(val ref: ActorRef) extends AnyVal
+
 /** A base for all scrappers.
  *
  * Provides a method to minify the effort needed to add new scrappers.
@@ -98,7 +100,7 @@ abstract class GenericScrapper(
   protected final var materializer: Option[ActorMaterializer] = None
   protected final var downloadMaterializer: Option[ActorMaterializer] = None
 
-  protected final def startDownloading(): Unit = {
+  protected final def startDownloading()(implicit senderRef: SenderRef): Unit = {
     if (downloadMaterializer.isEmpty) {
       implicit val actualMaterializer = ActorMaterializer()(context)
       downloadMaterializer = Some(actualMaterializer)
@@ -203,7 +205,7 @@ abstract class GenericScrapper(
     }
   }
 
-  protected final def startIndexing(fromPage: Int, toPage: Option[Int]): Unit = {
+  protected final def startIndexing(fromPage: Int, toPage: Option[Int])(implicit senderRef: SenderRef): Unit = {
     if (materializer == None) {
       implicit val actualMaterializer = ActorMaterializer()(context)
       materializer = Some(actualMaterializer)
@@ -278,38 +280,50 @@ abstract class GenericScrapper(
     }
   }
 
+  private def scrapperStatus = ScrapperStatus(
+    imboard = name,
+    isIndexing = !materializer.isEmpty,
+    isDownloading = !downloadMaterializer.isEmpty
+  )
 
-  protected final def stopIndexing(): Unit = {
+
+  protected final def stopIndexing()(implicit senderRef: SenderRef): Unit = {
     materializer.foreach { mat =>
       mat.shutdown()
       materializer = None
     }
+
+    senderRef.ref ! scrapperStatus
   }
 
-  protected final def stopDownloading() {
+  protected final def stopDownloading()(implicit senderRef: SenderRef): Unit = {
       downloadMaterializer.foreach { mat =>
         mat.shutdown()
         downloadMaterializer = None
       }
+
+    senderRef.ref ! scrapperStatus
   }
 
   override def receive = {
-    case StartIndexing(fromPage, toPage) =>
-      startIndexing(fromPage, toPage)
+    implicit val sref = SenderRef(sender)
 
-    case StopIndexing =>
-      stopIndexing()
-    case ScrapperStatusMsg =>
-      sender ! ScrapperStatus(
-        isIndexing = !materializer.isEmpty,
-        isDownloading = !downloadMaterializer.isEmpty
-      )
+    {
+      case StartIndexing(fromPage, toPage) =>
+        startIndexing(fromPage, toPage)
 
-    case StartDownloading =>
-      startDownloading()
+      case StopIndexing =>
+        implicit val sref = SenderRef(sender)
+        stopIndexing()
+      case ScrapperStatusMsg =>
+        sender ! scrapperStatus
 
-    case StopDownloading =>
-      stopDownloading()
+      case StartDownloading =>
+        startDownloading()
+
+      case StopDownloading =>
+        stopDownloading()
+    }
   }
 
   override def preStart() {
