@@ -14,7 +14,9 @@ case class Image(
   from: Seq[From],
   extension: String,
 
-  metadataOnly: Boolean,
+  metadataOnly: Boolean = true,
+  s3: Boolean = false,
+  s3url: Option[String] = None,
 
   indexedOn: Date = new Date(),
   _id: ObjectId = new ObjectId() // Hack to make it deserialize

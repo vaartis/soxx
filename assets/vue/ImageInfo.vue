@@ -68,9 +68,15 @@
          },
 
          imageSrc() {
-             return this.image.metadataOnly
-                  ? (this.image.from ? this.image.from[0].image : null)
-                  : `/image_files/${this.image.md5}${this.image.extension}`;
+             if (this.image.metadataOnly) {
+                 return this.image.from ? this.image.from[0].image : null;
+             } else {
+                 if (this.image.s3) {
+                     return this.image.s3url;
+                 } else {
+                     return `/image_files/${this.image.md5}${this.image.extension}`;
+                 }
+             }
          }
      },
 

@@ -76,8 +76,7 @@ class MoebooruScrapper(
             thumbnail = img.preview_url
           )
         ),
-        extension = fileName.substring(fileName.lastIndexOf('.')),
-        metadataOnly = true
+        extension = fileName.substring(fileName.lastIndexOf('.'))
       )
     )
   }
