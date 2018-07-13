@@ -307,24 +307,20 @@ abstract class GenericScrapper(
   }
 
   override def receive = {
-    implicit val sref = SenderRef(sender)
+    case StartIndexing(fromPage, toPage) =>
+      startIndexing(fromPage, toPage)(SenderRef(sender))
 
-    {
-      case StartIndexing(fromPage, toPage) =>
-        startIndexing(fromPage, toPage)
+    case StopIndexing =>
+      stopIndexing()(SenderRef(sender))
 
-      case StopIndexing =>
-        implicit val sref = SenderRef(sender)
-        stopIndexing()
-      case ScrapperStatusMsg =>
+    case StartDownloading =>
+      startDownloading()(SenderRef(sender))
+
+    case StopDownloading =>
+      stopDownloading()(SenderRef(sender))
+
+    case ScrapperStatusMsg =>
         sender ! scrapperStatus
-
-      case StartDownloading =>
-        startDownloading()
-
-      case StopDownloading =>
-        stopDownloading()
-    }
   }
 
   override def preStart() {
