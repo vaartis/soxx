@@ -24,9 +24,11 @@ scalacOptions ++= Seq(
 
 libraryDependencies ++= Seq(
   guice,
+  ws,
 
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
-  ws,
+  "de.leanovate.play-mockws" %% "play-mockws" % "2.6.2" % Test,
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % Test,
 
 
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.0",
