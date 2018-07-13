@@ -49,7 +49,7 @@ class NewDanbooruScrapper(
     ws
       .url(s"${baseUrl}/${apiAddition}.json")
       .addQueryStringParameters(
-        ("limit", 1.toString),
+        ("limit", pageSize.toString),
         ("page", currentPage.toString),
       )
       .get()
