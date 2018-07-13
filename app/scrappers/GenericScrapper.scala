@@ -218,7 +218,8 @@ abstract class GenericScrapper(
 
         val pageCount = {
           // Get the page count from the image count and page size
-          val pageCount = imageCount / pageSize
+          // Round up in case there's a small amount of images
+          val pageCount = Math.ceil(imageCount.floatValue / pageSize.floatValue).intValue
 
           // Limit to `toPage` if needed
           toPage match {
