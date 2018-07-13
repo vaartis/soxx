@@ -81,7 +81,7 @@ class NewDanbooruScrapper(
               thumbnail = img.preview_file_url.get
             )
           ),
-          extension = f".${img.file_ext}"
+          extension = f".${img.file_ext.get}"
         )
       )
     } else { None }
