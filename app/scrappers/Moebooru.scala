@@ -22,7 +22,8 @@ class MoebooruScrapper(
     file_url: String,
     preview_url: String,
     tags: String,
-    md5: String
+    md5: String,
+    file_ext: String
   )
 
   // There doesn't seem to be a real limit,
@@ -76,7 +77,7 @@ class MoebooruScrapper(
             thumbnail = img.preview_url
           )
         ),
-        extension = fileName.substring(fileName.lastIndexOf('.'))
+        extension = f".${img.file_ext}"
       )
     )
   }
