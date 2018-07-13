@@ -15,7 +15,7 @@ import soxx.scrappers._
 
 @Singleton
 class Mongo @Inject() (implicit lifecycle: ApplicationLifecycle, ec: ExecutionContext, config: Configuration) {
-  val client: MongoClient = MongoClient()
+  val client: MongoClient = MongoClient(config.get[String]("soxx.mongo.connectionString"))
 
   val codecRegistry =
     fromRegistries(
