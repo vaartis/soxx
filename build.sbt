@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
   "de.leanovate.play-mockws" %% "play-mockws" % "2.6.2" % Test,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % Test,
-
+  "com.jsuereth" %% "scala-arm" % "2.0",
 
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.0",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",

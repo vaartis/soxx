@@ -5,6 +5,8 @@ import scala.compat.Platform.{currentTime => now}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
+import resource._
+
 object Helpers {
   // Taken from https://gist.github.com/pathikrit/79ad500a6b31f62ab4e8
   /**
@@ -37,9 +39,6 @@ object Helpers {
 
   /** Read a file into an Either.
     */
-  def readFile(filePath: String): Either[Throwable, String] =
-    Try {
-      val cfgFile = scala.io.Source.fromFile(filePath)
-      try cfgFile.mkString finally cfgFile.close
-    }.toEither
+  def readFile(filePath: String): Either[Seq[Throwable], String] =
+    (for (cfgFile <- managed(scala.io.Source.fromFile(filePath))) yield cfgFile.mkString).either
 }
