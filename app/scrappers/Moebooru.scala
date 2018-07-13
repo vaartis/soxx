@@ -46,7 +46,7 @@ class MoebooruScrapper(
     ws
       .url(s"${baseUrl}/${apiAddition}.json")
       .addQueryStringParameters(
-        ("limit", 100.toString),
+        ("limit", pageSize.toString),
         ("page", currentPage.toString),
       )
       .get()
