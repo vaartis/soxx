@@ -177,13 +177,13 @@ abstract class GenericScrapper(
                   }
                 }
             } else {
-              val imagesDir = Paths.get("images")
+              val imagesDir = Paths.get(config.get[String]("soxx.scrappers.downloadDirectory"))
               if (Files.notExists(imagesDir)) {
                 // Create the directory to store images in..
                 Files.createDirectories(imagesDir)
               }
 
-              val savePath = Paths.get(f"images/$imageName")
+              val savePath = Paths.get(imagesDir.toString, imageName)
               if (Files.exists(savePath)) {
                 updateMetadataOnlyFalse()
               } else {
