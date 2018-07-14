@@ -237,7 +237,7 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
 
 
   "Moebooru scrapper should" - {
-    val _actorName = "test_new_moebooru"
+    val _actorName = "test_moebooru"
     val _scrapperClass = classOf[MoebooruScrapper]
     val _ws = MockWS {
       case ("GET", "http://example.com/post.xml") =>
