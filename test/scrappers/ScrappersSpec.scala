@@ -207,7 +207,7 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     val _scrapperClass = classOf[NewDanbooruScrapper]
     val _ws = MockWS {
       case ("GET", "http://example.com/counts/posts.json") =>
-        Action { Ok("""{"counts": {"posts": 1}}""") }
+        Action { Ok("""{"counts": {"posts": 2}}""") }
       case ("GET", "http://example.com/posts.json") =>
         Action {
           Ok(
