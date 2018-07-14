@@ -87,8 +87,8 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     actor ! StartIndexing(1, Some(1))
 
     actor ! ScrapperStatusMsg
-    expectMsg(5.seconds, ScrapperStatus(actorName, true, false)) // Scrapping process is started
-    expectMsg(5.seconds, ScrapperStatus(actorName, false, false)) // The indexing has finished
+    expectMsg(ScrapperStatus(actorName, true, false)) // Scrapping process is started
+    expectMsg(ScrapperStatus(actorName, false, false)) // The indexing has finished
 
     // Child tests should call to this parent implementation too
     def cleanup() {
@@ -116,8 +116,8 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
       actor ! StartDownloading
 
       actor ! ScrapperStatusMsg
-      expectMsg(5.seconds, ScrapperStatus(actorName, false, true)) // Downloading process is started
-      expectMsg(5.seconds, ScrapperStatus(actorName, false, false)) // Downloading process has finished
+      expectMsg(ScrapperStatus(actorName, false, true)) // Downloading process is started
+      expectMsg(ScrapperStatus(actorName, false, false)) // Downloading process has finished
 
       Files.exists(imagePath) shouldBe true
 
@@ -148,8 +148,8 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
       actor ! StartDownloading
 
       actor ! ScrapperStatusMsg
-      expectMsg(5.seconds, ScrapperStatus(actorName, false, true)) // Downloading process is started
-      expectMsg(5.seconds, ScrapperStatus(actorName, false, false)) // Downloading process has finished
+      expectMsg(ScrapperStatus(actorName, false, true)) // Downloading process is started
+      expectMsg(ScrapperStatus(actorName, false, false)) // Downloading process has finished
 
       whenReady(db.getCollection[Image]("images").find().toFuture) { case Seq(img) =>
         img shouldBe 's3

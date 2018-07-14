@@ -49,7 +49,7 @@ class S3UploaderSpec extends fixture.FlatSpec
   it should "not report nonexistent images as existing" in { f =>
     val probe = TestProbe()(f.actorSystem)
     probe.send(f.s3Uploader, ImageExists("test"))
-    probe.expectMsg(5.seconds, false)
+    probe.expectMsg(false)
   }
 
   it should "upload correctly" in { f =>
@@ -58,10 +58,10 @@ class S3UploaderSpec extends fixture.FlatSpec
     val probe = TestProbe()(f.actorSystem)
 
     probe.send(f.s3Uploader, UploadImage("test", new ByteArrayInputStream(testStr.getBytes), testStr.length, "text/plain"))
-    probe.expectMsg(5.seconds, true)
+    probe.expectMsg(true)
 
     probe.send(f.s3Uploader, ImageExists("test"))
-    probe.expectMsg(5.seconds, true)
+    probe.expectMsg(true)
 
     val resp = Await.result(f.ws.url("http://localhost:9999/soxx-images/test").get(), 5.seconds)
 
