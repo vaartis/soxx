@@ -3,8 +3,9 @@
 [![Build Status](https://travis-ci.org/vaartis/soxx.svg?branch=master)](https://travis-ci.org/vaartis/soxx)
 
 As of now, we can index and scrape images from several popular imageboards
-(as much as their API allows it) via a basic web interface admin panel. There are
-plans to make adding imageboards easier with a configuration file
+(as much as their API allows it) via a basic web interface admin panel. Adding
+new imageboards with APIs ideantical to other popular ones is simple with the `scrappers.toml`
+configuration file.
 
 The image viewing part is somewhat better: you can view images either
 right on the search page or their own page, you can search images by
