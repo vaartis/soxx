@@ -21,6 +21,21 @@ import play.api.inject.bind
 
 import soxx.mongowrapper._
 
+/** Scrapper integration tests. Ugly stuff here, beware!
+  *
+  * Basically, there are traits that help test image indexing and downloading
+  * (both to the filesystem and to S3), here's a little scheme that explains what they do:
+  *
+  * BaseScrapperTest       The base test trait, others mix it in, it tests indexing
+  * |                      (since it's same for every method anyway), starts S3,
+  * |                      and does some basic clean-up when it's done (like stopping S3)
+  * |
+  * \___ FileScrapperTest  The test trait to test downloading to the filesystem.
+  * |                      Cleans up the temporary directory and the file it creates when it's done.
+  * |
+  * \___ S3ScrapperTest    Test test trait to test uploading indexed images to S3.
+  *                        Doesn't require any special cleanup, it just calls the parent cleanup method.
+  */
 class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     with ImplicitSender
     with FreeSpecLike
