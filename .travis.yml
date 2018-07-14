@@ -1,0 +1,22 @@
+language: scala
+
+scala:
+  - 2.12.4
+
+addons:
+  apt:
+    packages:
+#     - nodejs
+#     - npm
+      - git
+
+services:
+  - mongodb
+
+before_script: # Temporary
+  - git clone https://github.com/vaartis/toml-scala ~/toml-scala
+  - cd ~/toml-scala && sbt publishLocal && cd -
+
+script:
+# - cd assets && npm install && cd -
+  - sbt test
