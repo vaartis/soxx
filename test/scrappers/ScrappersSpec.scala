@@ -31,10 +31,10 @@ import soxx.mongowrapper._
   * |                      and does some basic clean-up when it's done (like stopping S3)
   * |
   * \___ FileScrapperTest  The test trait to test downloading to the filesystem.
-  * |                      Cleans up the temporary directory and the file it creates when it's done.
+  * |                      Cleans up the temporary directory and the file it creates when it's done
   * |
   * \___ S3ScrapperTest    Test test trait to test uploading indexed images to S3.
-  *                        Doesn't require any special cleanup, it just calls the parent cleanup method.
+  *                        Doesn't require any special cleanup, it just calls the parent cleanup method
   */
 class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     with ImplicitSender
