@@ -13,6 +13,8 @@ val theScalaVersion = "2.12.4"
 
 scalaVersion := theScalaVersion
 
+fork in Test := false // Disable forking for tests, so we can pass system properties easily
+
 scalacOptions ++= Seq(
   "-feature",
   /*
