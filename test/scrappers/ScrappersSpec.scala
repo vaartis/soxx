@@ -4,13 +4,16 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import akka.testkit.{ ImplicitSender, TestKit }
 import mockws.{MockWS, MockWSHelpers}
-import scala.concurrent.Await
+import io.findify.s3mock.S3Mock
 
 import scala.concurrent.duration._
+import scala.concurrent.Await
 import java.nio.file.{ Files, Paths }
 
 import resource._
 import akka.actor._
+import io.minio.MinioClient
+import play.api.Application
 import play.api.mvc.Results._
 import play.api.libs.ws.WSClient
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -20,7 +23,7 @@ import soxx.mongowrapper._
 
 class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     with ImplicitSender
-    with FlatSpecLike
+    with FreeSpecLike
     with Matchers
     with BeforeAndAfterAll
     with MockWSHelpers
@@ -30,7 +33,15 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     TestKit.shutdownActorSystem(system)
   }
 
-  trait ScrapperTest {
+  trait BaseScrapperTest {
+
+    // S3 is always started, but isn't used if the app doesn't require it.
+    // This has been done to work around the fact that the S3 messaging
+    // actor is started with the application and therefore S3 needs to be
+    // started before the application starts
+    val s3 = S3Mock(port = 9999)
+    s3.start
+
     // The WS mock addresses
     def ws: MockWS
 
@@ -40,17 +51,8 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     // The class to test
     def scrapperClass: Class[_ <: GenericScrapper]
 
-    val tempDir = Files.createTempDirectory(self.path.name)
-
-    lazy val app =
-      new GuiceApplicationBuilder()
-        .configure(
-          "soxx.mongo.dbName" -> "soxx_test",
-
-          "soxx.scrappers.downloadDirectory" -> tempDir.toString,
-        )
-        .overrides(bind[WSClient].to(ws))
-        .build
+    // The application
+    def app: Application
 
     lazy val db = app.injector.instanceOf[Mongo].db
 
@@ -65,22 +67,42 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
       actorName
     )
 
+    // Indexing is same for everyone
+
+    actor ! StartIndexing(1, Some(1))
+
+    actor ! ScrapperStatusMsg
+    expectMsg(5.seconds, ScrapperStatus(actorName, true, false)) // Scrapping process is started
+    expectMsg(5.seconds, ScrapperStatus(actorName, false, false)) // The indexing has finished
+
+    // Child tests should call to this parent implementation too
+    def cleanup() {
+      Await.result(db.drop().toFuture, 5.seconds)
+
+      s3.stop
+    }
+  }
+
+  trait FileScrapperTest extends BaseScrapperTest {
+    override def app =
+      new GuiceApplicationBuilder()
+        .configure(
+          "soxx.mongo.dbName" -> "soxx_test",
+
+          "soxx.scrappers.downloadDirectory" -> tempDir.toString,
+        )
+        .overrides(bind[WSClient].to(ws))
+        .build
+
+    lazy val tempDir = Files.createTempDirectory(self.path.name)
+    lazy val imagePath = Paths.get(tempDir.toString, "image_hash.jpg")
+
     try {
-      // The test itself
-
-      actor ! StartIndexing(1, Some(1))
-
-      actor ! ScrapperStatusMsg
-      expectMsg(5.seconds, ScrapperStatus(actorName, true, false)) // Scrapping process is started
-      expectMsg(5.seconds, ScrapperStatus(actorName, false, false)) // The indexing has finished
-
       actor ! StartDownloading
 
       actor ! ScrapperStatusMsg
       expectMsg(5.seconds, ScrapperStatus(actorName, false, true)) // Downloading process is started
       expectMsg(5.seconds, ScrapperStatus(actorName, false, false)) // Downloading process has finished
-
-      val imagePath = Paths.get(tempDir.toString, "image_hash.jpg")
 
       Files.exists(imagePath) shouldBe true
 
@@ -88,36 +110,87 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
         src.mkString shouldBe "DOWNLOADED"
       }
     } finally {
-      // Cleanup
+      super.cleanup()
 
-      Await.result(db.drop().toFuture, 5.seconds)
+      Files.delete(imagePath)
+      Files.delete(tempDir)
     }
   }
 
-  "OldDanbooru scrapper" should "index and download images" in new ScrapperTest {
-    override def actorName = "test_old_danbooru"
-    override def scrapperClass = classOf[OldDanbooruScrapper]
-    override def ws = MockWS {
+  trait S3ScrapperTest extends BaseScrapperTest {
+    override def app =
+      new GuiceApplicationBuilder()
+        .configure(
+          "soxx.mongo.dbName" -> "soxx_test",
+
+          "soxx.s3.enabled" -> true,
+          "soxx.s3.endpoint" -> "http://localhost:9999"
+        )
+        .overrides(bind[WSClient].to(ws))
+        .build
+
+    try {
+      actor ! StartDownloading
+
+      actor ! ScrapperStatusMsg
+      expectMsg(5.seconds, ScrapperStatus(actorName, false, true)) // Downloading process is started
+      expectMsg(5.seconds, ScrapperStatus(actorName, false, false)) // Downloading process has finished
+
+      whenReady(db.getCollection[Image]("images").find().toFuture) { case Seq(img) =>
+        img shouldBe 's3
+        img.s3url shouldBe Some("http://localhost:9999/soxx-images/image_hash.jpg")
+      }
+
+      val minio = new MinioClient("http://localhost:9999")
+      for (
+        inpStream <- managed(minio.getObject("soxx-images", "image_hash.jpg"));
+        src <- managed(scala.io.Source.fromInputStream(inpStream))
+      ) {
+        src.mkString shouldBe "DOWNLOADED"
+      }
+    } finally {
+      super.cleanup()
+    }
+  }
+
+  "OldDanbooru scrapper should" - {
+    val _actorName = "test_old_danbooru"
+    val _scrapperClass = classOf[OldDanbooruScrapper]
+    val _ws = MockWS {
       case ("GET", "http://example.com/index.php?page=dapi&s=post&q=index") =>
         Action { Ok("""<posts count="1"></posts>""") }
       case ("GET", "http://example.com/index.php?page=dapi&s=post&q=index&pid=1&json=1") =>
         Action {
           Ok(
             (for (src <- managed(scala.io.Source.fromInputStream(getClass.getResourceAsStream("/scrappers/old_danbooru_image.json"))))
-              yield src.mkString
+            yield src.mkString
             ).opt.get
           )
         }
       case ("GET", "http://example.com/images/2486/image_name.jpg") =>
         Action { Ok("DOWNLOADED")  }
     }
+
+    "index and download images to" - {
+      "the filesystem" in new FileScrapperTest {
+        override def actorName = f"${_actorName}_fs"
+        override def scrapperClass = _scrapperClass
+        override def ws = _ws
+      }
+
+      "S3" in new S3ScrapperTest {
+        override def actorName = f"${_actorName}_s3"
+        override def scrapperClass = _scrapperClass
+        override def ws = _ws
+      }
+    }
   }
 
 
-  "NewDanbooru scrapper" should "index and download images" in new ScrapperTest {
-    override def actorName = "test_new_danbooru"
-    override def scrapperClass = classOf[NewDanbooruScrapper]
-    override def ws = MockWS {
+  "NewDanbooru scrapper should" - {
+    val _actorName = "test_new_danbooru"
+    val _scrapperClass = classOf[NewDanbooruScrapper]
+    val _ws = MockWS {
       case ("GET", "http://example.com/counts/posts.json") =>
         Action { Ok("""{"counts": {"posts": 1}}""") }
       case ("GET", "http://example.com/posts.json") =>
@@ -131,12 +204,27 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
       case ("GET", "http://example.com/data/image_hash.jpg") =>
         Action { Ok("DOWNLOADED")  }
     }
+
+    "index and download images to" - {
+      "the filesystem" in new FileScrapperTest {
+        override def actorName = f"${_actorName}_fs"
+        override def scrapperClass = _scrapperClass
+        override def ws = _ws
+      }
+
+      "S3" in new S3ScrapperTest {
+        override def actorName = f"${_actorName}_s3"
+        override def scrapperClass = _scrapperClass
+        override def ws = _ws
+      }
+    }
   }
 
-  "Moebooru scrapper" should "index and download images" in new ScrapperTest {
-    override def actorName = "test_new_moebooru"
-    override def scrapperClass = classOf[MoebooruScrapper]
-    override def ws = MockWS {
+
+  "Moebooru scrapper should" - {
+    val _actorName = "test_new_moebooru"
+    val _scrapperClass = classOf[MoebooruScrapper]
+    val _ws = MockWS {
       case ("GET", "http://example.com/post.xml") =>
         Action { Ok("""<posts count="1"></posts>""") }
       case ("GET", "http://example.com/post.json") =>
@@ -149,6 +237,21 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
         }
       case ("GET", "http://example.com/data/image_hash.jpg") =>
         Action { Ok("DOWNLOADED")  }
+    }
+
+
+    "index and download images to" - {
+      "the filesystem" in new FileScrapperTest {
+        override def actorName = f"${_actorName}_fs"
+        override def scrapperClass = _scrapperClass
+        override def ws = _ws
+      }
+
+      "S3" in new S3ScrapperTest {
+        override def actorName = f"${_actorName}_s3"
+        override def scrapperClass = _scrapperClass
+        override def ws = _ws
+      }
     }
   }
 }
