@@ -11,7 +11,7 @@ import akka.stream._
 import akka.stream.scaladsl._
 import akka.actor._
 import akka.pattern.ask
-import play.api.inject.Injector
+import play.api.inject.{ Injector, BindingKey }
 import play.api.libs.json._
 import play.api.libs.ws._
 import play.api.{ Logger, Configuration }
@@ -138,10 +138,10 @@ abstract class GenericScrapper(
                 config.get[String]("soxx.s3.bucket-name"),
               )
 
-              context
-                .actorSelection(context.system / "s3-uploader")
-                .resolveOne(5.seconds)
-                .flatMap { s3Uploader => (s3Uploader ? ImageExists(imageName)).map { a => (s3Uploader, a) } }
+              val s3Uploader = injector.instanceOf(BindingKey(classOf[ActorRef]).qualifiedWith("s3-uploader"))
+
+              (s3Uploader ? ImageExists(imageName))
+                .map { a => (s3Uploader, a) }
                 .flatMap { case (s3Uploader, exists_) =>
                   val exists = exists_.asInstanceOf[Boolean]
                   if (exists) {
@@ -195,6 +195,7 @@ abstract class GenericScrapper(
               }
             }
           }
+          .recover { case x => logger.error(f"Downloading error: $x") }
           .runWith(Sink.ignore)
           .andThen {
             case Success(_) =>
