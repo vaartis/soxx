@@ -32,9 +32,7 @@ class S3UploaderSpec extends fixture.FlatSpec
     lazy val app = GuiceApplicationBuilder()
       .configure(
         "soxx.s3.enabled" -> true,
-        "soxx.s3.endpoint" -> "http://localhost:9999",
-        "soxx.s3.access-key" -> "test_access_key",
-        "soxx.s3.secret-key" -> "test_secret_key"
+        "soxx.s3.endpoint" -> "http://localhost:9999"
       ).build
     lazy val actorSystem = app.injector.instanceOf[ActorSystem]
     lazy val s3Uploader = app.injector.instanceOf(BindingKey(classOf[ActorRef]).qualifiedWith("s3-uploader"))
