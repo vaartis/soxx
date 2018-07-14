@@ -19,4 +19,7 @@ before_script: # Temporary
 
 script:
 # - cd assets && npm install && cd -
-  - sbt test
+  - sbt coverage test
+
+after_success:
+  - sbt coverageReport coveralls

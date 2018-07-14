@@ -1,6 +1,7 @@
 # Soxx!
 
 [![Build Status](https://travis-ci.org/vaartis/soxx.svg?branch=master)](https://travis-ci.org/vaartis/soxx)
+[![Coverage Status](https://coveralls.io/repos/github/vaartis/soxx/badge.svg)](https://coveralls.io/github/vaartis/soxx)
 
 As of now, we can index and scrape images from several popular imageboards
 (as much as their API allows it) via a basic web interface admin panel. Adding
