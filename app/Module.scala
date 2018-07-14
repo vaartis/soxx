@@ -6,7 +6,7 @@ import soxx.mongowrapper.Mongo
 import soxx.s3.S3Uploader
 import soxx.scrappers._
 
-class Module(env: Environment, config: Configuration) extends AbstractModule with AkkaGuiceSupport {
+class Module(_env: Environment, config: Configuration) extends AbstractModule with AkkaGuiceSupport {
   def configure = {
     bind(classOf[Mongo]).asEagerSingleton()
 

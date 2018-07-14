@@ -3,7 +3,6 @@ package soxx.helpers
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.compat.Platform.{currentTime => now}
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Try
 
 import resource._
 

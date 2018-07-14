@@ -4,7 +4,6 @@ import scala.concurrent._
 import javax.inject._
 
 import play.api.mvc._
-import akka.actor._
 
 @Singleton
 class SoxxController @Inject()(

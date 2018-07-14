@@ -8,8 +8,7 @@ import scala.util._
 
 import akka.actor._
 import akka.util.Timeout
-import akka.pattern.ask
-import com.mongodb.client.model.changestream.{ ChangeStreamDocument, FullDocument, OperationType }
+import com.mongodb.client.model.changestream.{ FullDocument, OperationType }
 import play.api.libs.json._
 
 import soxx.mongowrapper._
@@ -81,7 +80,6 @@ class AdminPanelActor(out: ActorRef)(
           import org.mongodb.scala.model.Facet
           import org.mongodb.scala.model.Filters._
           import org.mongodb.scala.model.Aggregates.{ out => _, _ }
-          import org.mongodb.scala.model.Updates.combine
 
           import soxx.helpers.Helpers
 

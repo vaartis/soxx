@@ -1,8 +1,7 @@
 package soxx.s3
 
 import javax.inject._
-import java.io.{ File, InputStream }
-import java.nio.file.Paths
+import java.io.InputStream
 import scala.util.control.NonFatal
 
 import play.api.{ Logger, Configuration }

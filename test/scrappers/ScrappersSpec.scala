@@ -12,11 +12,9 @@ import java.nio.file.{ Files, Paths }
 import resource._
 import akka.actor._
 import play.api.mvc.Results._
-import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.inject.bind
-import org.mongodb.scala.MongoClient
 
 import soxx.mongowrapper._
 
@@ -24,7 +22,6 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
     with ImplicitSender
     with FlatSpecLike
     with Matchers
-    with BeforeAndAfterEach
     with BeforeAndAfterAll
     with MockWSHelpers
     with ScalaFutures {

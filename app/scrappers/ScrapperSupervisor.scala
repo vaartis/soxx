@@ -2,13 +2,11 @@ package soxx.scrappers
 
 import javax.inject._
 import scala.util._
-import scala.util.control.NonFatal
 
 import akka.actor._
 import scala.concurrent._
 import play.api.{Configuration, Logger}
 import play.api.inject.{Injector, ApplicationLifecycle}
-import play.api.libs.ws._
 import toml.Toml
 import toml.Codecs._
 
@@ -22,7 +20,6 @@ import soxx.helpers.Helpers
 class ScrapperSupervisor @Inject()
   (
     implicit ec: ExecutionContext,
-    ws: WSClient,
     mongo: Mongo,
     lifecycle: ApplicationLifecycle,
     appConfig: Configuration,

@@ -3,7 +3,6 @@ package soxx.scrappers
 import scala.concurrent._
 
 import play.api.inject.Injector
-import play.api.libs.ws._
 import play.api.libs.json._
 
 class OldDanbooruScrapper(
