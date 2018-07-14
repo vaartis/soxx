@@ -50,6 +50,7 @@ class S3Uploader @Inject() (config: Configuration) extends Actor {
     // Ensure the bucket exists
     if (!client.bucketExists(bucketName)) {
       client.makeBucket(bucketName)
+      logger.info(f"Created the S3 '$bucketName' bucket")
     }
   }
 
