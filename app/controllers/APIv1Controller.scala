@@ -30,8 +30,6 @@ class APIv1Controller @Inject()
     mongo: Mongo
   ) extends AbstractController(cc) {
 
-  val searchQueryParser = new QueryParser
-
   implicit val actorResolveTimeout: Timeout = 5 seconds
 
   lazy val scrapperSupervisor = Await.result(
@@ -81,9 +79,9 @@ class APIv1Controller @Inject()
         // The left value is the error that might've happened while parsing
         // The right value is the parsed query
 
-        import searchQueryParser.{Success, NoSuccess}
+        import QueryParser.{Success, NoSuccess}
 
-        searchQueryParser.parseQuery(query) match {
+        QueryParser.parseQuery(query) match {
           case Success(tagList, _) =>
             Right(
               tagList.map {

@@ -17,7 +17,7 @@ case class RegexTag(value: Regex) extends QueryTag
   * Note the the previous makes tildes otherwise unusable in regular expressions. I suppose this
   * issue will be addressed in the future.
   */
-class QueryParser extends RegexParsers {
+object QueryParser extends RegexParsers {
   override def skipWhitespace = true
 
   def fullTag: Parser[FullTag] = """[^\s\-]+""".r ^^ { x => FullTag(x.toString) }
