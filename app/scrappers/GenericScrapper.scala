@@ -90,6 +90,8 @@ abstract class GenericScrapper(
 
   implicit val akkaTimeout = akka.util.Timeout(5.seconds)
 
+  private val imageCollection = mongo.db.getCollection[Image]("images")
+
   /** Converts the internal image to the actual image used in the database.
     *
     * This function should set the [[Image.from]] field to a [[scala.collection.Seq]] with a single element:
@@ -107,8 +109,8 @@ abstract class GenericScrapper(
 
       for (
         imagesToDownload <-
-        mongo.db
-        .getCollection[Image]("images").find(combine(
+        imageCollection
+        .find(combine(
           equal("metadataOnly", true), // Find the images that only have metadata
           equal("from.name", name)
         )).toFuture
@@ -123,8 +125,7 @@ abstract class GenericScrapper(
             // Just update the metadata
             // This is needed if several imageboards have the same image
             def updateMetadataOnlyFalse() =
-                mongo.db
-                  .getCollection[Image]("images")
+              imageCollection
                   .updateOne(equal("_id", image._id), set("metadataOnly", false))
                   .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
                   .toFuture
@@ -162,7 +163,7 @@ abstract class GenericScrapper(
                             case true =>
                               stream.close()
 
-                              mongo.db.getCollection[Image]("images")
+                              imageCollection
                                 .updateOne(
                                   equal("_id", image._id),
                                   combine(
@@ -190,7 +191,7 @@ abstract class GenericScrapper(
                 // Actually download the image
                 ws.url(image.from.head.image).get()
                   .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
-                  .flatMap { case IOResult(_, Success(Done)) => mongo.db.getCollection[Image]("images").updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
+                  .flatMap { case IOResult(_, Success(Done)) => imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
                   .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
               }
             }
@@ -241,7 +242,7 @@ abstract class GenericScrapper(
                 .collect { case Some(i) => i } // Filter out all None's and return images
                 .map { img =>
                   // If it's a new picture
-                  if (Await.result(mongo.db.getCollection[Image]("images").find(equal("md5", img.md5)).toFuture(), 5 seconds).isEmpty) {
+                  if (Await.result(imageCollection.find(equal("md5", img.md5)).toFuture(), 5 seconds).isEmpty) {
                     InsertOneModel(img)
                   } else {
                     UpdateOneModel(
@@ -265,8 +266,7 @@ abstract class GenericScrapper(
             (operations, currentPage)
           }
           .mapAsyncUnordered(maxPageFetchingConcurrency) { case (operations, currentPage) =>
-            mongo.db
-              .getCollection[Image]("images")
+            imageCollection
               .bulkWrite(operations, BulkWriteOptions().ordered(false))
               .toFuture.map { r => (r, currentPage) }
           }
