@@ -1,6 +1,5 @@
 package controllers.apiv1 // Hack to make it recompile correctly
 
-import akka.stream.Materializer
 import scala.language.postfixOps
 
 import javax.inject._
@@ -10,6 +9,7 @@ import scala.concurrent.duration._
 
 import akka.actor._
 import akka.util._
+import akka.stream.Materializer
 import play.api.mvc._
 import play.api.libs.json._
 import org.mongodb.scala._
@@ -74,37 +74,8 @@ class APIv1Controller @Inject()
 
     val imageCollection = mongo.db.getCollection[Image]("images")
 
-    query
-      .map { query =>
-        // The left value is the error that might've happened while parsing
-        // The right value is the parsed query
-
-        import QueryParser.{Success, NoSuccess}
-
-        QueryParser.parseQuery(query) match {
-          case Success(tagList, _) =>
-            Right(
-              tagList.map {
-                case FullTag(tag) =>
-                  Document("tags" -> Document("$in" -> Seq(tag)))
-                case ExcludeTag(tag) =>
-                  Document("tags" -> Document("$not" -> Document("$in" -> Seq(tag))))
-                case RegexTag(tag) =>
-                  Document("tags" -> Document("$regex" -> tag.regex, "$options" -> "i"))
-              }
-            )
-          case NoSuccess(errorString, _) =>
-            Left(errorString)
-        }
-      }
-      .getOrElse(Right(List())) // Use an empty list if there is no query
-      .map { searchQuery =>
-        import org.mongodb.scala.model.Filters._
-
-        // Actually get the images
-        // Just use an empty document if there's no filters
-        val mongoSearchQuery = if (searchQuery.isEmpty) { Document() } else { and(searchQuery:_*) }
-
+    APIv1Controller.tagStringToQuery(query) match {
+      case Right(mongoSearchQuery) =>
         imageCollection
           .countDocuments(mongoSearchQuery)
           .toFuture()
@@ -129,11 +100,9 @@ class APIv1Controller @Inject()
                 )
               }
           }
-      } match {
-        case Right(result) => result
-        case Left(errorString) =>
-          Future { Ok(Json.toJson(Json.obj("ok" -> false, "error" -> errorString))) }
-      }
+      case Left(errorString) =>
+        Future { Ok(Json.toJson(Json.obj("ok" -> false, "error" -> errorString))) }
+    }
   }
 
   def admin_panel_socket = WebSocket.accept[JsValue, JsValue] { req =>
@@ -143,5 +112,46 @@ class APIv1Controller @Inject()
     ActorFlow.actorRef { out =>
       AdminPanelActor.props(out)
     }
+  }
+}
+
+object APIv1Controller {
+
+  /** Parses a tag string if there is one and returns either a parsing error or a MongoDB filter for these tags.
+    *
+    * TODO: make a mechanism to create OR tags (currently all tags are AND'ed automatically)
+    *
+    * @param query the query string to parse. The result will be an empty filter if there is no query
+    */
+  def tagStringToQuery(query: Option[String]): Either[String, org.bson.conversions.Bson] = {
+    query
+      .map { query =>
+        // The left value is the error that might've happened while parsing
+        // The right value is the parsed query
+
+        import QueryParser.{Success, NoSuccess}
+
+        QueryParser.parseQuery(query) match {
+          case Success(tagList, _) =>
+            Right(
+              tagList.map {
+                case FullTag(tag) =>
+                  Document("tags" -> Document("$in" -> Seq(tag)))
+                case ExcludeTag(tag) =>
+                  Document("tags" -> Document("$not" -> Document("$in" -> Seq(tag))))
+                case RegexTag(tag) =>
+                  Document("tags" -> Document("$regex" -> tag.regex, "$options" -> "i"))
+              }
+            )
+          case NoSuccess(errorString, _) =>
+            Left(errorString)
+        }
+      }
+      .getOrElse(Right(List())) // Use an empty list if there is no query
+      .map { sq =>
+        import org.mongodb.scala.model.Filters.and
+
+        if (sq.isEmpty) { Document() } else { { and(sq:_*) } }
+      }
   }
 }
