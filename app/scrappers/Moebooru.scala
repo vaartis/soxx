@@ -22,7 +22,9 @@ class MoebooruScrapper(
     preview_url: String,
     tags: String,
     md5: String,
-    file_ext: String
+    // Some do provide it, some do not. Yande.re has it,
+    // but konachan does not, although the API otherwise seems to be the same.
+    file_ext: Option[String]
   )
 
   // There doesn't seem to be a real limit,
@@ -76,7 +78,8 @@ class MoebooruScrapper(
             thumbnail = img.preview_url
           )
         ),
-        extension = f".${img.file_ext}"
+        extension =
+          img.file_ext.map(e => f".$e").getOrElse(fileName.substring(fileName.lastIndexOf('.')))
       )
     )
   }
