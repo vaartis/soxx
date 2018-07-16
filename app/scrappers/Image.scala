@@ -20,7 +20,19 @@ case class Image(
 
   indexedOn: Date = new Date(),
   _id: ObjectId = new ObjectId() // Hack to make it deserialize
-)
+) {
+  def toFrontend(host: String): JsValue = {
+    import Image.imageFormat
+
+    Json.toJson(this).as[JsObject] ++ Json.obj(
+      "image" -> {
+        if (metadataOnly) {
+          from.head.image
+        } else { if (s3) { s3url.get } else { f"$host/image_files/${md5}${extension}" } }
+      }
+    ) - "metadataOnly" - "s3" - "s3url"
+  }
+}
 
 object Image {
   // Hacks here. Serialization doesn't work on these things out of the box.

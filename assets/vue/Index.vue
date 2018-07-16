@@ -7,7 +7,7 @@
                 <a v-bind:href="`/image/${image._id}`"
                    data-toggle="modal" v-bind:data-target="`#image-modal-${image._id}`">
                     <div class="card-img-top img-card"
-                         v-bind:style="genImgLink(image)">
+                         v-bind:style="{backgroundImage: `url(${image.image})`}">
                     </div>
                 </a>
                 <ImageModal v-bind:image="image" />
@@ -104,22 +104,6 @@
 
          goToPage(page) {
              window.history.pushState({page: page}, '', this.computePageUrl(page));
-         },
-
-         genImgLink(image) {
-             let link = null;
-
-             if (image.metadataOnly) {
-                 link = image.from ? image.from[0].image : null;
-             } else {
-                 if (image.s3) {
-                     link = image.s3url;
-                 } else {
-                     link = `/image_files/${image.md5}${image.extension}`;
-                 }
-             }
-
-             return { backgroundImage: `url(${link})` };
          }
      },
 

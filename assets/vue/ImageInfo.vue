@@ -36,8 +36,8 @@
                 </tr>
             </tbody>
         </table>
-        <a v-bind:href="imageSrc">
-            <img class="img-fluid" v-bind:src="imageSrc" />
+        <a v-bind:href="image.image">
+            <img class="img-fluid" v-bind:src="image.image" />
         </a>
     </div>
 </template>
@@ -65,18 +65,6 @@
              let time = moment(this.image.indexedOn);
 
              return `${time.format("LLL")} (${time.fromNow()})`
-         },
-
-         imageSrc() {
-             if (this.image.metadataOnly) {
-                 return this.image.from ? this.image.from[0].image : null;
-             } else {
-                 if (this.image.s3) {
-                     return this.image.s3url;
-                 } else {
-                     return `/image_files/${this.image.md5}${this.image.extension}`;
-                 }
-             }
          }
      },
 

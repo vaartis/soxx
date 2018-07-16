@@ -40,4 +40,11 @@ object Helpers {
     */
   def readFile(filePath: String): Either[Seq[Throwable], String] =
     (for (cfgFile <- managed(scala.io.Source.fromFile(filePath))) yield cfgFile.mkString).either
+
+  implicit class RequestHelpers(req: play.api.mvc.Request[_]) {
+
+    /** A full host full host addres with a protocol.
+      */
+    def hostWithProtocol = f"""http${ if(req.secure) "s" else "" }://""" + req.host
+  }
 }

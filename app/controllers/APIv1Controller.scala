@@ -17,6 +17,7 @@ import org.mongodb.scala._
 import soxx.mongowrapper._
 import soxx.search._
 import soxx.scrappers._
+import soxx.helpers.Helpers.RequestHelpers
 
 @Singleton
 class APIv1Controller @Inject()
@@ -63,7 +64,7 @@ class APIv1Controller @Inject()
       .find(equal("_id", new ObjectId(id)))
       .toFuture
       .map {
-        case Seq(theImage) => Ok(Json.toJson(Json.obj("ok" -> true, "result" -> theImage)))
+        case Seq(theImage) => Ok(Json.toJson(Json.obj("ok" -> true, "result" -> theImage.toFrontend(request.hostWithProtocol))))
         case Seq() => Ok(Json.toJson(Json.obj("ok" -> false, "error" -> f"The image ${id} doesn't exist")))
       }
   }
@@ -93,7 +94,7 @@ class APIv1Controller @Inject()
                     "ok" -> true,
                     "result" ->
                       Json.obj(
-                        "images" -> images,
+                        "images" -> images.map(_.toFrontend(request.hostWithProtocol)),
                         "imageCount" -> foundImageCount
                       )
                   )
