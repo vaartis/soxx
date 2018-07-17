@@ -78,6 +78,11 @@
              let queryUrl = new URI(baseURL);
              queryUrl.setQuery("query", tag);
 
+             // Remove the page parameter if we're coming from the search page
+             if (!this.isADedicatedPage) {
+                 queryUrl.removeQuery("page");
+             }
+
              return queryUrl.toString();
          },
 
