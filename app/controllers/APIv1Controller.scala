@@ -101,7 +101,7 @@ class APIv1Controller @Inject()
               }
           }
       case Left(errorString) =>
-        Future { Ok(Json.toJson(Json.obj("ok" -> false, "error" -> errorString))) }
+        Future { Ok(Json.obj("ok" -> false, "error" -> errorString)) }
     }
   }
 
