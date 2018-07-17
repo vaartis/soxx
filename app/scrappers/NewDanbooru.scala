@@ -11,7 +11,8 @@ class NewDanbooruScrapper(
   favicon: String,
 
   injector: Injector
-) extends GenericScrapper(name, baseUrl, favicon, injector) {
+) extends GenericScrapper(name, baseUrl, favicon, injector)
+    with traits.JSONImageCount {
 
   case class NewDanbooruImage(
     id: Int,
@@ -34,15 +35,14 @@ class NewDanbooruScrapper(
 
   override val apiAddition = "posts"
 
+  override val imageCountAddition = "counts/posts.json" // This isnt really properly documented
+
+  override def extractImageCount(from: JsValue) =
+    (from \ "counts" \ "posts").as[Int]
+
   // New danbooru actually hard-limits to 200 images
   // Old limited to 100
   override val pageSize = 200
-
-  override def getImageCount: Future[Int] =
-    ws
-      .url(f"${baseUrl}/counts/posts.json") // This isnt really properly documented
-      .get()
-      .map { resp => (resp.json \ "counts" \ "posts").as[Int] }
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[NewDanbooruImage], Int)] =
     ws

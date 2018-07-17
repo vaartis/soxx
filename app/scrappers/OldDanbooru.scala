@@ -3,6 +3,7 @@ package soxx.scrappers
 import scala.concurrent._
 
 import play.api.inject.Injector
+import scala.xml.Elem
 import play.api.libs.json._
 
 class OldDanbooruScrapper(
@@ -11,7 +12,8 @@ class OldDanbooruScrapper(
   favicon: String,
 
   injector: Injector
-) extends GenericScrapper(name, baseUrl, favicon, injector) {
+) extends GenericScrapper(name, baseUrl, favicon, injector)
+    with traits.XMLImageCount {
 
   case class OldDanbooruImage(
     id: Int,
@@ -24,7 +26,7 @@ class OldDanbooruScrapper(
     hash: String
   )
 
-  // Boards tests do not allow more then 8 connections,
+  // Boards tend to not allow more then 8 connections,
   // if you see that the indexing just stops, this might be
   // the reason it doesnt progress (e.g. at 10 most just hang)
   override val maxPageFetchingConcurrency = 8
@@ -36,11 +38,10 @@ class OldDanbooruScrapper(
 
   override val apiAddition = "index.php?page=dapi&s=post&q=index"
 
-  override def getImageCount: Future[Int] =
-    ws
-      .url(s"${baseUrl}/${apiAddition}")
-      .get()
-      .map { resp => (resp.xml \\ "posts" \ "@count").map{ _.text }.head.toInt }
+  override val imageCountAddition = f"$apiAddition&limit=1"
+
+  override def extractImageCount(from: Elem) =
+    (from \\ "posts" \ "@count").map{ _.text }.head.toInt
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[OldDanbooruImage], Int)] =
     ws

@@ -3,6 +3,7 @@ package soxx.scrappers
 import scala.concurrent._
 
 import play.api.inject.Injector
+import xml.Elem
 import play.api.libs.json._
 
 class MoebooruScrapper(
@@ -11,7 +12,8 @@ class MoebooruScrapper(
   favicon: String,
 
   injector: Injector
-) extends GenericScrapper(name, baseUrl, favicon, injector) {
+) extends GenericScrapper(name, baseUrl, favicon, injector)
+    with traits.XMLImageCount {
 
   case class MoebooruImage(
     id: Int,
@@ -38,11 +40,10 @@ class MoebooruScrapper(
 
   override val apiAddition = "post"
 
-  override def getImageCount: Future[Int] =
-    ws
-      .url(s"${baseUrl}/${apiAddition}.xml")
-      .get()
-      .map { resp => (resp.xml \\ "posts" \ "@count").map{ _.text }.head.toInt }
+  override val imageCountAddition = f"${apiAddition}.xml"
+
+  override def extractImageCount(from: Elem) =
+    (from \\ "posts" \ "@count").map{ _.text }.head.toInt
 
   override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[MoebooruImage], Int)] =
     ws

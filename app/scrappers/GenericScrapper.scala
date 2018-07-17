@@ -33,7 +33,7 @@ case class SenderRef(val ref: ActorRef) extends AnyVal
  */
 abstract class GenericScrapper(
   name: String,
-  baseUrl: String,
+  val baseUrl: String,
   favicon: String,
 
   injector: Injector
