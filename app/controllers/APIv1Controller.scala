@@ -40,20 +40,13 @@ class APIv1Controller @Inject()
     Duration.Inf
   )
 
-  def imboard_info(name: Option[String]) = Action { implicit request: Request[AnyContent] =>
-    val collection = mongo.db
-      .getCollection[BoardInfo]("imboard_info")
+  def imboard_info(name: Option[String]) = Action.async { implicit request: Request[AnyContent] =>
+    val collection = mongo.db.getCollection[BoardInfo]("imboard_info")
 
-    Ok(
-      Json.toJson(
-        name match {
-          case Some(nm) =>
-            Await.result(collection.find(Document("_id" -> nm)).toFuture, 5 seconds)
-          case None =>
-            Await.result(collection.find().toFuture, 5 seconds)
-        }
-      )
-    )
+    name
+      .map { nm => collection.find(Document("_id" -> nm)).toFuture }
+      .getOrElse { collection.find().toFuture }
+      .map { v => Ok(Json.toJson(v)) }
   }
 
   def image(id: String) = Action.async { implicit request: Request[AnyContent] =>
