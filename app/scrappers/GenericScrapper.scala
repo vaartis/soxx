@@ -41,7 +41,7 @@ abstract class GenericScrapper(
 
   // Injected stuff
   protected implicit val (ws, mongo, ec, config) =
-    (injector.instanceOf[WSClient], injector.instanceOf[Mongo], injector.instanceOf[ExecutionContext], injector.instanceOf[Configuration])
+    (injector.instanceOf[WSClient], injector.instanceOf[Mongo], injector.instanceOf[ScrapperExecutionContext], injector.instanceOf[Configuration])
 
   /** Defines the structure of the image returned by the imageboard.
     *

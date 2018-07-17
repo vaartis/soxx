@@ -8,6 +8,8 @@ import soxx.scrappers._
 
 class Module(_env: Environment, config: Configuration) extends AbstractModule with AkkaGuiceSupport {
   def configure = {
+    bind(classOf[ScrapperExecutionContext]).asEagerSingleton()
+
     bind(classOf[Mongo]).asEagerSingleton()
 
     bindActor[ScrapperSupervisor]("scrapper-supervisor")
