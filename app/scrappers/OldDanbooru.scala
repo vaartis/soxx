@@ -60,7 +60,6 @@ class OldDanbooruScrapper(
           From(
             id = img.id,
             name = name,
-            imageName = img.image,
             score = img.score,
             post = f"${baseUrl}/index.php?page=post&s=view&id=${img.id}",
             image = f"${baseUrl}/images/${img.directory}/${img.image}",

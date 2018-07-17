@@ -55,13 +55,8 @@ class NewDanbooruScrapper(
       .map { res => (res.json.as[Seq[NewDanbooruImage]], currentPage) }
 
   override def scrapperImageToImage(img: NewDanbooruImage): Option[Image] = {
-    import java.net.URI
-    import java.nio.file.Paths
-
     // Image isn't broken / deleted
     if (!img.file_url.isEmpty) {
-      // getPath is important here, because without it Paths.get hangs
-      val fileName = Paths.get(new URI(img.file_url.get).getPath).getFileName.toString
 
       Some(
         Image(
@@ -73,7 +68,6 @@ class NewDanbooruScrapper(
             From(
               id = img.id,
               name = name,
-              imageName = fileName,
               score = img.score,
               post = f"${baseUrl}/posts/${img.id}",
               image = img.file_url.get,

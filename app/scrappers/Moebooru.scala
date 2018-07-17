@@ -72,7 +72,6 @@ class MoebooruScrapper(
           From(
             id = img.id,
             name = name,
-            imageName = fileName,
             score = img.score,
             post = f"${baseUrl}/post/show/${img.id}",
             image = img.file_url,
