@@ -57,25 +57,28 @@ class NewDanbooruScrapper(
   override def scrapperImageToImage(img: NewDanbooruImage): Option[Image] = {
     // Image isn't broken / deleted
     if (!img.file_url.isEmpty) {
+      import io.scalaland.chimney.dsl._
 
       Some(
-        Image(
-          height = img.image_height,
-          width = img.image_width,
-          tags = img.tag_string.split(" "),
-          md5 = img.md5.get,
-          from = Seq(
-            From(
-              id = img.id,
-              name = name,
-              score = img.score,
-              post = f"${baseUrl}/posts/${img.id}",
-              image = img.file_url.get,
-              thumbnail = img.preview_file_url.get
+        img.into[Image]
+          .withFieldRenamed(_.image_height, _.height)
+          .withFieldRenamed(_.image_width, _.width)
+          .withFieldComputed(_.extension, _.file_ext.get)
+          .withFieldComputed(_.md5, _.md5.get)
+          .withFieldComputed(_.tags, _.tag_string.split(" ").toSeq)
+          .withFieldConst(
+            _.from,
+            Seq(
+              From(
+                id = img.id,
+                name = name,
+                score = img.score,
+                post = f"${baseUrl}/posts/${img.id}",
+                image = img.file_url.get,
+                thumbnail = img.preview_file_url.get
+              )
             )
-          ),
-          extension = f".${img.file_ext.get}"
-        )
+          ).transform
       )
     } else { None }
   }

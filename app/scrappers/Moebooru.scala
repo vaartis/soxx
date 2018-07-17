@@ -59,16 +59,21 @@ class MoebooruScrapper(
     import java.net.URI
     import java.nio.file.Paths
 
+    import io.scalaland.chimney.dsl._
+
     // getPath is important here, because without it Paths.get hangs
     val fileName = Paths.get(new URI(img.file_url).getPath).getFileName.toString
 
     Some(
-      Image(
-        height = img.height,
-        width = img.width,
-        tags = img.tags.split(" ").toSeq,
-        md5 = img.md5,
-        from = Seq(
+      img.into[Image]
+        .withFieldComputed(_.tags, _.tags.split(" ").toSeq)
+        .withFieldComputed(
+          _.extension,
+          _.file_ext.map(e => f".$e").getOrElse(fileName.substring(fileName.lastIndexOf('.')))
+        )
+        .withFieldConst(
+          _.from,
+          Seq(
           From(
             id = img.id,
             name = name,
@@ -77,10 +82,9 @@ class MoebooruScrapper(
             image = img.file_url,
             thumbnail = img.preview_url
           )
-        ),
-        extension =
-          img.file_ext.map(e => f".$e").getOrElse(fileName.substring(fileName.lastIndexOf('.')))
-      )
+          )
+        )
+        .transform
     )
   }
 }

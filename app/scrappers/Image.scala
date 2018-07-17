@@ -21,20 +21,37 @@ case class Image(
   indexedOn: Date = new Date(),
   _id: ObjectId = new ObjectId() // Hack to make it deserialize
 ) {
-  def toFrontend(host: String): JsValue = {
-    import Image.imageFormat
+  def toFrontend(host: String): FrontendImage = {
+    import io.scalaland.chimney.dsl._
 
-    Json.toJson(this).as[JsObject] ++ Json.obj(
-      "image" -> {
-        if (metadataOnly) {
-          from.head.image
-        } else { if (s3) { s3url.get } else { f"$host/image_files/${md5}${extension}" } }
-      }
-    ) - "metadataOnly" - "s3" - "s3url"
+    this.into[FrontendImage]
+      .withFieldConst(
+        _.image,
+        {
+          if (metadataOnly) {
+            from.head.image
+          } else { if (s3) { s3url.get } else { f"$host/image_files/${md5}${extension}" } }
+        }
+      )
+      .transform
   }
 }
 
-object Image {
+case class FrontendImage(
+  height: Int,
+  width: Int,
+  tags: Seq[String],
+  md5: String,
+  from: Seq[From],
+  extension: String,
+
+  indexedOn: Date,
+  _id: ObjectId,
+
+  image: String
+)
+
+object FrontendImage {
   // Hacks here. Serialization doesn't work on these things out of the box.
   // Date has to be overrided because of the MongoDB date formatting
 
@@ -45,5 +62,5 @@ object Image {
 
   implicit val implDateWrites = dateWrites("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
 
-  implicit val imageFormat = Json.format[Image]
+  implicit val imageFormat = Json.format[FrontendImage]
 }

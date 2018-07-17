@@ -29,6 +29,7 @@ libraryDependencies ++= Seq(
   ws,
 
   "com.jsuereth" %% "scala-arm" % "2.0",
+  "io.scalaland" %% "chimney" % "0.2.1",
 
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.0",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",
