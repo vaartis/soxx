@@ -63,7 +63,7 @@ class NewDanbooruScrapper(
         img.into[Image]
           .withFieldRenamed(_.image_height, _.height)
           .withFieldRenamed(_.image_width, _.width)
-          .withFieldComputed(_.extension, _.file_ext.get)
+          .withFieldComputed(_.extension, "." + _.file_ext.get)
           .withFieldComputed(_.md5, _.md5.get)
           .withFieldComputed(_.tags, _.tag_string.split(" ").toSeq)
           .withFieldConst(
