@@ -119,8 +119,6 @@ object APIv1Controller {
 
   /** Parses a tag string if there is one and returns either a parsing error or a MongoDB filter for these tags.
     *
-    * TODO: make a mechanism to create OR tags (currently all tags are AND'ed automatically)
-    *
     * @param query the query string to parse. The result will be an empty filter if there is no query
     */
   def tagStringToQuery(query: Option[String]): Either[String, org.bson.conversions.Bson] = {
@@ -129,29 +127,33 @@ object APIv1Controller {
         // The left value is the error that might've happened while parsing
         // The right value is the parsed query
 
+        import org.mongodb.scala.model.Filters._
+
         import QueryParser.{Success, NoSuccess}
+
 
         QueryParser.parseQuery(query) match {
           case Success(tagList, _) =>
+            def transformTag(t: QueryTag): org.bson.conversions.Bson = t match {
+              case SimpleTag(tag) => equal("tags", tag)
+              case ExactTag(tag) => equal("tags", tag)
+              case RegexTag(tag) => regex("tags", tag.regex, "i")
+
+              case TagOR(left, right) => or(transformTag(left), transformTag(right))
+              case TagAND(left, right) => and(transformTag(left), transformTag(right))
+              case TagNOT(tag) => not(transformTag(tag))
+
+              case TagGroup(group) => and(group.map(transformTag):_*)
+            }
+
+            // Put everything into an implicit AND
             Right(
-              tagList.map {
-                case FullTag(tag) =>
-                  Document("tags" -> Document("$in" -> Seq(tag)))
-                case ExcludeTag(tag) =>
-                  Document("tags" -> Document("$not" -> Document("$in" -> Seq(tag))))
-                case RegexTag(tag) =>
-                  Document("tags" -> Document("$regex" -> tag.regex, "$options" -> "i"))
-              }
+              and(tagList.map(transformTag):_*)
             )
           case NoSuccess(errorString, _) =>
             Left(errorString)
         }
       }
-      .getOrElse(Right(List())) // Use an empty list if there is no query
-      .map { sq =>
-        import org.mongodb.scala.model.Filters.and
-
-        if (sq.isEmpty) { Document() } else { { and(sq:_*) } }
-      }
+      .getOrElse(Right(Document())) // Use an empty list if there is no query
   }
 }
