@@ -105,6 +105,73 @@ class APIv1Controller @Inject()
     }
   }
 
+  def similiar_images(id: String, offset: Int, _resultLimit: Int) = Action.async { implicit request: Request[AnyContent] =>
+    import org.bson.types.ObjectId
+    import org.mongodb.scala._
+    import org.mongodb.scala.bson.{ Document => _, _ }
+    import org.mongodb.scala.model.Filters._
+    import org.mongodb.scala.model.Aggregates._
+    import org.mongodb.scala.model.Accumulators._
+    import org.mongodb.scala.model.Sorts._
+    import org.mongodb.scala.model.Projections._
+
+    val resultLimit: Int = if (_resultLimit > 250) { 250 } else { _resultLimit }
+
+    val imageCollection = mongo.db.getCollection[Image]("images")
+
+    try {
+      imageCollection.find(equal("_id", new ObjectId(id)))
+        .headOption
+        .flatMap { imageOpt =>
+
+          imageOpt match {
+            case Some(image) =>
+              imageCollection
+                .aggregate(Seq(
+                  // This makes MongoDB use the index, otherwise it'd use COLLSCAN
+                  sort(descending("_id")),
+                  unwind("$tags"),
+                  `match`(in("tags", image.tags:_*)),
+                  group("$_id", sum("count", 1)),
+                  project(fields(
+                    computed(
+                      "score",
+                      equal("$divide", Seq("$count", image.tags.length))
+                    )
+                  )),
+                  sort(descending("score")),
+                  skip(offset),
+                  limit(resultLimit),
+                  // Because the document is not what it was and only includes an ID and a similiarity value, we now retreive the whole document again
+                  lookup(from = "images", localField = "_id", foreignField = "_id", as = "doc"),
+                  replaceRoot(
+                    equal("$arrayElemAt", Seq("$doc", 0))
+                  )
+                )).toFuture.map { imgs =>
+                  Ok(Json.obj(
+                    "ok" -> true,
+                    "images" -> Json.toJson(imgs.map(_.toFrontend(request.hostWithProtocol)))
+                  ))
+                }
+            case None => Future.successful(
+              Ok(Json.obj(
+                "ok" -> false,
+                "error" -> f"The image $id doesn't exist"
+              ))
+            )
+          }
+        }
+    } catch {
+      case e: IllegalArgumentException =>
+        Future.successful {
+          Ok(Json.obj(
+            "ok" -> false,
+            "error" -> f"The image id $id is invalid ($e)"
+          ))
+        }
+    }
+  }
+
   def admin_panel_socket = WebSocket.accept[JsValue, JsValue] { req =>
     import play.api.libs.streams._
     import soxx.admin._

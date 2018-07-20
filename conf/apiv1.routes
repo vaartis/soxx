@@ -1,10 +1,13 @@
 # Images list
-GET     /images          controllers.apiv1.APIv1Controller.images(query: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 25)
+GET     /images               controllers.apiv1.APIv1Controller.images(query: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 25)
 
 # A single image
-GET     /image/:id       controllers.apiv1.APIv1Controller.image(id: String)
+GET     /image/:id            controllers.apiv1.APIv1Controller.image(id: String)
+
+# Similiar images
+GET     /similiar_images/:id  controllers.apiv1.APIv1Controller.similiar_images(id: String, offset: Int ?= 0, limit: Int ?= 25)
 
 # Imageboard info
-GET     /imboard_info    controllers.apiv1.APIv1Controller.imboard_info(name: Option[String] = None)
+GET     /imboard_info         controllers.apiv1.APIv1Controller.imboard_info(name: Option[String] = None)
 
-GET     /admin_panel_socket controllers.apiv1.APIv1Controller.admin_panel_socket
+GET     /admin_panel_socket   controllers.apiv1.APIv1Controller.admin_panel_socket
