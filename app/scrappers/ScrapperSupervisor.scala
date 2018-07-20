@@ -72,7 +72,8 @@ class ScrapperSupervisor @Inject()
       .createIndexes(
         Seq(
           IndexModel(Document("from.name" -> 1)),
-          IndexModel(Document("md5" -> 1))
+          IndexModel(Document("md5" -> 1)),
+          IndexModel(Document("tags" -> 1))
         )
       )
       .subscribe(
