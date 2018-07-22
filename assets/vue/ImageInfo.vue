@@ -42,7 +42,7 @@
 
         <div class="container-fluid">
             <div class="row">
-                <div class="card col-lg-6 col-xl-4" v-for="simage in similiarImages" v-bind:key="simage._id">
+                <div class="card col-lg-6 col-xl-4" v-for="simage in similarImages" v-bind:key="simage._id">
                     <!-- Hacky but works! Looks beter then object-fit too  -->
                     <!-- Just using the first "from" may not be the best idea -->
                     <a v-bind:href="`/image/${simage._id}`">
@@ -52,8 +52,8 @@
             </div>
         </div>
 
-        <button class="btn btn-primary mx-auto" style="width: 15em;" v-bind:style="{ display: showMoreSimiliarButtonVisible ? 'block' : 'none' }" v-on:click="loadMoreSimiliar">
-            Similiar images
+        <button class="btn btn-primary mx-auto" style="width: 15em;" v-bind:style="{ display: showMoreSimilarButtonVisible ? 'block' : 'none' }" v-on:click="loadMoreSimilar">
+            Similar images
         </button>
     </div>
 </template>
@@ -78,8 +78,8 @@
 
      data() {
          return {
-             similiarImages: [],
-             showMoreSimiliarButtonVisible: true
+             similarImages: [],
+             showMoreSimilarButtonVisible: true
          };
      },
 
@@ -121,18 +121,18 @@
              return he.decode(tag);
          },
 
-         loadMoreSimiliar() {
-             let url = new URI(`/api/v1/similiar_images/${this.image._id}`);
-             url.addQuery("offset", this.similiarImages.length);
+         loadMoreSimilar() {
+             let url = new URI(`/api/v1/similar_images/${this.image._id}`);
+             url.addQuery("offset", this.similarImages.length);
 
              fetch(url)
                  .then(resp => resp.json())
                  .then(jsonResp => {
-                     this.similiarImages = _.concat(this.similiarImages, jsonResp.images);
+                     this.similarImages = _.concat(this.similarImages, jsonResp.images);
 
                      // FIXME: make configurable
                      if (jsonResp.images.length < 25) {
-                         this.showMoreSimiliarButtonVisible = false;
+                         this.showMoreSimilarButtonVisible = false;
                      }
                  })
 

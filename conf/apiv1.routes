@@ -4,8 +4,8 @@ GET     /images               controllers.apiv1.APIv1Controller.images(query: Op
 # A single image
 GET     /image/:id            controllers.apiv1.APIv1Controller.image(id: String)
 
-# Similiar images
-GET     /similiar_images/:id  controllers.apiv1.APIv1Controller.similiar_images(id: String, offset: Int ?= 0, limit: Int ?= 25)
+# Similar images
+GET     /similar_images/:id  controllers.apiv1.APIv1Controller.similar_images(id: String, offset: Int ?= 0, limit: Int ?= 25)
 
 # Imageboard info
 GET     /imboard_info         controllers.apiv1.APIv1Controller.imboard_info(name: Option[String] = None)

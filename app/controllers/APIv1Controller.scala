@@ -105,7 +105,7 @@ class APIv1Controller @Inject()
     }
   }
 
-  def similiar_images(id: String, offset: Int, _resultLimit: Int) = Action.async { implicit request: Request[AnyContent] =>
+  def similar_images(id: String, offset: Int, _resultLimit: Int) = Action.async { implicit request: Request[AnyContent] =>
     import org.bson.types.ObjectId
     import org.mongodb.scala._
     import org.mongodb.scala.bson.{ Document => _, _ }
@@ -139,7 +139,7 @@ class APIv1Controller @Inject()
                     )
                   )),
                   sort(descending("score")),
-                  // Because the document is not what it was and only includes an ID and a similiarity value, we now retreive the whole document again
+                  // Because the document is not what it was and only includes an ID and a similarity value, we now retreive the whole document again
                   lookup(from = "images", localField = "_id", foreignField = "_id", as = "doc"),
                   replaceRoot(
                     equal("$arrayElemAt", Seq("$doc", 0))

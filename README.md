@@ -72,7 +72,7 @@ Some important things include:
 - Searching
   - [x] Basic image search by tags and tag regular expressions
   - [ ] Advanced image search with grouping, AND, OR
-  - [ ] Similiar image search
+  - [ ] Similar image search
   - [ ] Searching images by their properties (width, height, rating)
 
 ## Contributions
