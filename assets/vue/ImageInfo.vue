@@ -126,16 +126,16 @@
              url.addQuery("offset", this.similiarImages.length);
 
              fetch(url)
-                 .then(resp => {
-                     resp.json().then(jsonResp => {
-                         this.similiarImages = _.concat(this.similiarImages, jsonResp.images);
+                 .then(resp => resp.json())
+                 .then(jsonResp => {
+                     this.similiarImages = _.concat(this.similiarImages, jsonResp.images);
 
-                         // FIXME: make configurable
-                         if (jsonResp.images.length < 25) {
-                             this.showMoreSimiliarButtonVisible = false;
-                         }
-                     })
+                     // FIXME: make configurable
+                     if (jsonResp.images.length < 25) {
+                         this.showMoreSimiliarButtonVisible = false;
+                     }
                  })
+
          }
      }
  }

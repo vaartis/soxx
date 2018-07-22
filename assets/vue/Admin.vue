@@ -111,8 +111,9 @@
              }
          };
 
-         fetch("/api/v1/imboard_info").then(res => {
-             res.json().then(imboard_list => {
+         fetch("/api/v1/imboard_info")
+             .then(res => res.json())
+             .then(imboard_list => {
                  this.imboards = imboard_list;
 
                  _.map(imboard_list, (imboard) => {
@@ -120,8 +121,6 @@
                      ws.send(JSON.stringify({tp: "imboard-scrapper-status", imboard: imboard._id}))
                  });
              });
-         });
-
      },
 
      methods: {
