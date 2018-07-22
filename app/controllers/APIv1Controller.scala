@@ -128,8 +128,7 @@ class APIv1Controller @Inject()
             case Some(image) =>
               imageCollection
                 .aggregate(Seq(
-                  // This makes MongoDB use the index, otherwise it'd use COLLSCAN
-                  sort(descending("_id")),
+                  `match`(not(equal("_id", image._id))),
                   unwind("$tags"),
                   `match`(in("tags", image.tags:_*)),
                   group("$_id", sum("count", 1)),
