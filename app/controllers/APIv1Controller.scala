@@ -140,13 +140,13 @@ class APIv1Controller @Inject()
                     )
                   )),
                   sort(descending("score")),
-                  skip(offset),
-                  limit(resultLimit),
                   // Because the document is not what it was and only includes an ID and a similiarity value, we now retreive the whole document again
                   lookup(from = "images", localField = "_id", foreignField = "_id", as = "doc"),
                   replaceRoot(
                     equal("$arrayElemAt", Seq("$doc", 0))
-                  )
+                  ),
+                  skip(offset),
+                  limit(resultLimit)
                 )).toFuture.map { imgs =>
                   Ok(Json.obj(
                     "ok" -> true,
