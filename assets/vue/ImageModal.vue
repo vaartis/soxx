@@ -31,3 +31,9 @@
      components: { ImageInfo }
  }
 </script>
+
+<style>
+ .modal-lg {
+     max-width: 80%;
+ }
+</style>

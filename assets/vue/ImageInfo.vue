@@ -39,6 +39,22 @@
         <a v-bind:href="image.image">
             <img class="img-fluid" v-bind:src="image.image" />
         </a>
+
+        <div class="container-fluid">
+            <div class="row">
+                <div class="card col-lg-6 col-xl-4" v-for="simage in similarImages" v-bind:key="simage._id">
+                    <!-- Hacky but works! Looks beter then object-fit too  -->
+                    <!-- Just using the first "from" may not be the best idea -->
+                    <a v-bind:href="`/image/${simage._id}`">
+                        <div class="card-img-top img-card" v-bind:style="{backgroundImage: `url(${simage.image})`}"></div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary mx-auto" style="width: 15em;" v-bind:style="{ display: showMoreSimilarButtonVisible ? 'block' : 'none' }" v-on:click="loadMoreSimilar">
+            Similar images
+        </button>
     </div>
 </template>
 
@@ -58,6 +74,13 @@
              type: Boolean,
              required: true
          }
+     },
+
+     data() {
+         return {
+             similarImages: [],
+             showMoreSimilarButtonVisible: true
+         };
      },
 
      computed: {
@@ -96,7 +119,40 @@
 
          unescapeTag(tag) {
              return he.decode(tag);
+         },
+
+         loadMoreSimilar() {
+             let url = new URI(`/api/v1/similar_images/${this.image._id}`);
+             url.addQuery("offset", this.similarImages.length);
+
+             fetch(url)
+                 .then(resp => resp.json())
+                 .then(jsonResp => {
+                     this.similarImages = _.concat(this.similarImages, jsonResp.images);
+
+                     // FIXME: make configurable
+                     if (jsonResp.images.length < 25) {
+                         this.showMoreSimilarButtonVisible = false;
+                     }
+                 })
+
          }
      }
  }
 </script>
+
+<style>
+ .card-columns {
+     column-count: 5;
+     max-width: 100%;
+ }
+
+ .img-card {
+     height: 30em;
+     width: auto;
+     position: relative;
+     background-position: 50% 50%;
+     background-repeat: no-repeat;
+     background-size: cover;
+ }
+</style>

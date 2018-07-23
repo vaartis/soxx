@@ -12,34 +12,72 @@
                    value="Search" />
             <input class="btn btn-light form-control mx-2"
                    type="button" value="Help"
-                   data-toggle="collapse" data-target="#search-help-content" />
-            <div class="collapse mt-3" id="search-help-content">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Syntax</th>
-                            <th scope="col">Meaning</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <th scope="row">tag</th>
-                            <td>Include the tag</td>
-                        </tr>
-                        <tr>
-                            <th scope="row">-tag</th>
-                            <td>Exclude the tag</td>
-                        </tr>
-                        <tr>
-                            <th scope="row">regex~tag_regex~</th>
-                            <td>
-                                Search tags by a regular expression.
-                                Note, that the regular expression <b>cannot</b> contant
-                                a tilde (that would end the tag)
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                   data-toggle="modal" data-target="#search-help-modal" />
+            <div class="modal fade" role="dialog" tabIndex="-1" id="search-help-modal">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Search help</h5>
+                        </div>
+                        <div class="modal-body">
+                            Note, that tags without logical operators are implicitly AND'ed.
+
+                            <br><br>
+
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Syntax</th>
+                                        <th scope="col">Meaning</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">tag</th>
+                                        <td>
+                                            Include a simple tag. This tag cannot contain none of the following symbols: <b>( ) - | &</b> or <b>\</b>.
+                                            If you want to use those symbols, you'll need to use the "exact" tag form.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">"tag"</th>
+                                        <td>
+                                            Include an exact tag. This tag can contain any symbols, the <b>"</b> symbol can be
+                                            escaped as <b>\"</b>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">!tag</th>
+                                        <td>
+                                            Logically negate any tag, which basically means exclude it by some condition, which can
+                                            not only be the full tag, but e.g. a regular expression or a tag group.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">REGEX(tag_regex)</th>
+                                        <td>
+                                            Search tags by a regular expression. Note, that the ")" symbol
+                                            can be escaped as \).
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">(tag1 tag2)</th>
+                                        <td>
+                                            Tag group. Groups several tags together to make logical operators work on all of them.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">tag1 && tag2 <i>and</i> tag1 || tag2 </th>
+                                        <td>
+                                            Logical operators that combine tags. && means AND, || means OR. Any tag type
+                                            can be used with them, including tag groups and excluded tags.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </form>
     </nav>

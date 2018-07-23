@@ -105,6 +105,72 @@ class APIv1Controller @Inject()
     }
   }
 
+  def similar_images(id: String, offset: Int, _resultLimit: Int) = Action.async { implicit request: Request[AnyContent] =>
+    import org.bson.types.ObjectId
+    import org.mongodb.scala._
+    import org.mongodb.scala.bson.{ Document => _, _ }
+    import org.mongodb.scala.model.Filters._
+    import org.mongodb.scala.model.Aggregates._
+    import org.mongodb.scala.model.Accumulators._
+    import org.mongodb.scala.model.Sorts._
+    import org.mongodb.scala.model.Projections._
+
+    val resultLimit: Int = if (_resultLimit > 250) { 250 } else { _resultLimit }
+
+    val imageCollection = mongo.db.getCollection[Image]("images")
+
+    try {
+      imageCollection.find(equal("_id", new ObjectId(id)))
+        .headOption
+        .flatMap { imageOpt =>
+
+          imageOpt match {
+            case Some(image) =>
+              imageCollection
+                .aggregate(Seq(
+                  `match`(not(equal("_id", image._id))),
+                  unwind("$tags"),
+                  `match`(in("tags", image.tags:_*)),
+                  group("$_id", sum("count", 1)),
+                  project(fields(
+                    computed(
+                      "score",
+                      equal("$divide", Seq("$count", image.tags.length))
+                    )
+                  )),
+                  sort(descending("score")),
+                  // Because the document is not what it was and only includes an ID and a similarity value, we now retreive the whole document again
+                  lookup(from = "images", localField = "_id", foreignField = "_id", as = "doc"),
+                  replaceRoot(
+                    equal("$arrayElemAt", Seq("$doc", 0))
+                  ),
+                  skip(offset),
+                  limit(resultLimit)
+                )).toFuture.map { imgs =>
+                  Ok(Json.obj(
+                    "ok" -> true,
+                    "images" -> Json.toJson(imgs.map(_.toFrontend(request.hostWithProtocol)))
+                  ))
+                }
+            case None => Future.successful(
+              Ok(Json.obj(
+                "ok" -> false,
+                "error" -> f"The image $id doesn't exist"
+              ))
+            )
+          }
+        }
+    } catch {
+      case e: IllegalArgumentException =>
+        Future.successful {
+          Ok(Json.obj(
+            "ok" -> false,
+            "error" -> f"The image id $id is invalid ($e)"
+          ))
+        }
+    }
+  }
+
   def admin_panel_socket = WebSocket.accept[JsValue, JsValue] { req =>
     import play.api.libs.streams._
     import soxx.admin._
@@ -119,8 +185,6 @@ object APIv1Controller {
 
   /** Parses a tag string if there is one and returns either a parsing error or a MongoDB filter for these tags.
     *
-    * TODO: make a mechanism to create OR tags (currently all tags are AND'ed automatically)
-    *
     * @param query the query string to parse. The result will be an empty filter if there is no query
     */
   def tagStringToQuery(query: Option[String]): Either[String, org.bson.conversions.Bson] = {
@@ -129,29 +193,33 @@ object APIv1Controller {
         // The left value is the error that might've happened while parsing
         // The right value is the parsed query
 
+        import org.mongodb.scala.model.Filters._
+
         import QueryParser.{Success, NoSuccess}
+
 
         QueryParser.parseQuery(query) match {
           case Success(tagList, _) =>
+            def transformTag(t: QueryTag): org.bson.conversions.Bson = t match {
+              case SimpleTag(tag) => equal("tags", tag)
+              case ExactTag(tag) => equal("tags", tag)
+              case RegexTag(tag) => regex("tags", tag.regex, "i")
+
+              case TagOR(left, right) => or(transformTag(left), transformTag(right))
+              case TagAND(left, right) => and(transformTag(left), transformTag(right))
+              case TagNOT(tag) => not(transformTag(tag))
+
+              case TagGroup(group) => and(group.map(transformTag):_*)
+            }
+
+            // Put everything into an implicit AND
             Right(
-              tagList.map {
-                case FullTag(tag) =>
-                  Document("tags" -> Document("$in" -> Seq(tag)))
-                case ExcludeTag(tag) =>
-                  Document("tags" -> Document("$not" -> Document("$in" -> Seq(tag))))
-                case RegexTag(tag) =>
-                  Document("tags" -> Document("$regex" -> tag.regex, "$options" -> "i"))
-              }
+              and(tagList.map(transformTag):_*)
             )
           case NoSuccess(errorString, _) =>
             Left(errorString)
         }
       }
-      .getOrElse(Right(List())) // Use an empty list if there is no query
-      .map { sq =>
-        import org.mongodb.scala.model.Filters.and
-
-        if (sq.isEmpty) { Document() } else { { and(sq:_*) } }
-      }
+      .getOrElse(Right(Document())) // Use an empty list if there is no query
   }
 }
