@@ -114,7 +114,7 @@
          let queryUrl = new URI(window.location);
 
          fetch("/api/v1/imboard_info")
-             .then(resp => resp.json)
+             .then(resp => resp.json())
              .then(boards => {
                  _.forEach(boards, (board) => {
                      Vue.set(this.imboard_info, board._id, _.omit(board, "_id"));
