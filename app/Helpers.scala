@@ -1,5 +1,6 @@
 package soxx.helpers
 
+import scala.util.control.NonFatal
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.compat.Platform.{currentTime => now}
 import scala.concurrent.duration.FiniteDuration
@@ -39,7 +40,12 @@ object Helpers {
   /** Read a file into an Either.
     */
   def readFile(filePath: String): Either[Seq[Throwable], String] =
-    (for (cfgFile <- managed(scala.io.Source.fromFile(filePath))) yield cfgFile.mkString).either
+    try {
+      (for (cfgFile <- managed(scala.io.Source.fromFile(filePath))) yield cfgFile.mkString).either
+    } catch {
+      case NonFatal(e) => Left(Seq(e))
+    }
+
 
   implicit class RequestHelpers(req: play.api.mvc.Request[_]) {
 
