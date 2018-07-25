@@ -50,11 +50,14 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
 
   trait BaseScrapperTest {
 
+    // Start on a random port
+    val s3port = 10000 + scala.util.Random.nextInt(1000)
+
     // S3 is always started, but isn't used if the app doesn't require it.
     // This has been done to work around the fact that the S3 messaging
     // actor is started with the application and therefore S3 needs to be
     // started before the application starts
-    val s3 = S3Mock(port = 9999)
+    val s3 = S3Mock(port = s3port)
     s3.start
 
     // The WS mock addresses
@@ -139,7 +142,7 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
           "soxx.mongo.dbName" -> "soxx_test",
 
           "soxx.s3.enabled" -> true,
-          "soxx.s3.endpoint" -> "http://localhost:9999"
+          "soxx.s3.endpoint" -> f"http://localhost:${s3port}"
         )
         .overrides(bind[WSClient].to(ws))
         .build
@@ -153,10 +156,10 @@ class ScrappersSpec extends TestKit(ActorSystem("ScrappersSpec"))
 
       whenReady(db.getCollection[Image]("images").find().toFuture) { case Seq(img) =>
         img shouldBe 's3
-        img.s3url shouldBe Some("http://localhost:9999/soxx-images/image_hash.jpg")
+        img.s3url shouldBe Some(f"http://localhost:${s3port}/soxx-images/image_hash.jpg")
       }
 
-      val minio = new MinioClient("http://localhost:9999")
+      val minio = new MinioClient(f"http://localhost:${s3port}")
       for (
         inpStream <- managed(minio.getObject("soxx-images", "image_hash.jpg"));
         src <- managed(scala.io.Source.fromInputStream(inpStream))
