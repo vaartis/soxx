@@ -73,6 +73,14 @@
                                             can be used with them, including tag groups and excluded tags.
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <th scope="row"> property <i>operator</i> value</th>
+                                        <td>
+                                            This syntax allows you to search images by some of their properties (like width, height, hash).
+                                            Valid operators are <b>>, <, >=, <=, =</b>. Note, that operators that include <b>></b> and <b><</b> are only valid on numeric properties.
+                                            Full list of properties one can search by can be found <a href="https://github.com/vaartis/soxx/blob/master/app/scrappers/Image.scala">in the source code</a>.
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
