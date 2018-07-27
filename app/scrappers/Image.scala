@@ -37,6 +37,22 @@ case class Image(
   }
 }
 
+object Image {
+  /** Get all fields of integer type.
+    *
+    * This is used to allow or disallow using gt/lt operators when searching by
+    * field value in [[controllers.apiv1.APIV1Controller.tagStringToQuery]], so that one
+    * could only compare numerical fields.
+   */
+  lazy val intFields = {
+    import scala.reflect.runtime.universe._
+
+    typeOf[Image].members
+      .collect { case m: MethodSymbol if m.isGetter && m.returnType <:< typeOf[Int] => m.name.toString }
+      .toSeq
+  }
+}
+
 case class FrontendImage(
   height: Int,
   width: Int,

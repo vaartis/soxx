@@ -40,16 +40,25 @@ class QueryParserSpec extends FlatSpec with Matchers with LoneElement {
     rt.value.regex shouldBe """test_\(\d+\)"""
   }
 
+  it should "parse all kinds of property tags" in {
+    val r = parse("width >= 100 height < 250 md5 = test")
+
+    r(0) shouldBe PropertyTag("width", ">=", "100")
+    r(1) shouldBe PropertyTag("height", "<", "250")
+    r(2) shouldBe PropertyTag("md5", "=", "test")
+  }
+
   it should "parse multiple different tags separated with spaces" in {
-    val r = parse("""!test_1 test_2 "tag_3_(test)" REGEX(test_\(\d+\\))""")
-    r should have length 4
+    val r = parse("""!test_1 test_2 "tag_3_(test)" width >= 1280 REGEX(test_\(\d+\\))""")
+    r should have length 5
 
     r(0) shouldBe TagNOT(SimpleTag("test_1"))
     r(1) shouldBe SimpleTag("test_2")
     r(2) shouldBe ExactTag("tag_3_(test)")
+    r(3) shouldBe PropertyTag("width" , ">=", "1280")
 
-    r(3) shouldBe a [RegexTag]
-    r(3).asInstanceOf[RegexTag].value.regex shouldBe """test_\(\d+\)"""
+    r(4) shouldBe a [RegexTag]
+    r(4).asInstanceOf[RegexTag].value.regex shouldBe """test_\(\d+\)"""
 
   }
 

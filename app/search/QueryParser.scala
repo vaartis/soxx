@@ -11,6 +11,7 @@ sealed abstract class QueryTag
 case class SimpleTag(value: String) extends QueryTag
 case class ExactTag(value: String) extends QueryTag
 case class RegexTag(value: Regex) extends QueryTag
+case class PropertyTag(property: String, operator: String, value: String) extends QueryTag
 
 case class TagAND(left: QueryTag, right: QueryTag) extends QueryTag
 case class TagOR(left: QueryTag, right: QueryTag) extends QueryTag
@@ -21,7 +22,7 @@ case class TagGroup(value: List[QueryTag]) extends QueryTag
 /** Search query parser.
   *
   * This parser is used to parse the search query into tags, which can include the following:
-  * - a simple tag: anything that does not contain "(", ")", "!", "|", "&" or "\" can be considered a simple tag
+  * - a simple tag: anything that does not contain "(", ")", "!", "|", "&", ">", "<", "=" or "\" can be considered a simple tag
   * - an exact tag: a quoted tag that can contain any symbols including an escaped quote symbol (so, for example, "\"_\"" means "_")
   * - logical NOT marker: if any kind of tag is preceeded with an exclamation mark, it's meaning is inverted (logical NOT)
   * - tag group: a list of tags that is surrounded by parenthesis to group them together
@@ -33,7 +34,7 @@ object QueryParser extends RegexParsers with PackratParsers {
   override def skipWhitespace = true
 
   // Basically, include anything except some special symbols
-  def simpleTag: Parser[SimpleTag] = """[^\s\!\(\)\"\\\&\|]+""".r ^^ { SimpleTag(_) }
+  def simpleTag: Parser[SimpleTag] = """[^\s!\(\)"\\\&\|\>\<\=]+""".r ^^ { SimpleTag(_) }
 
   // This will match anything quoted and also allow quoting with \"
   // In the final tag, \" will be replaced with "
@@ -47,6 +48,8 @@ object QueryParser extends RegexParsers with PackratParsers {
     ))
   }
 
+  def property[PropertyTag] = "\\w+".r ~ (">=" | "<=" | ">" | "<" | "=") ~ "(\\w+)|(\\d+)".r ^^ { case property ~ op ~ value => PropertyTag(property, op, value) }
+
   def not: Parser[QueryTag] = "!" ~> aTag ^^ { TagNOT(_) }
 
   def groupedTags: PackratParser[TagGroup] = "(" ~> aTag.+ <~ ")" ^^ { TagGroup(_) }
@@ -56,7 +59,7 @@ object QueryParser extends RegexParsers with PackratParsers {
     ( "&&" ^^^ { TagAND(_, _) } ) | ( "||" ^^^ { TagOR(_, _) } )
   )
 
-  lazy val withoutLogic = groupedTags | regexTag | exactTag | not | simpleTag
+  lazy val withoutLogic = groupedTags | regexTag | exactTag | not | property | simpleTag
   lazy val aTag = logic | withoutLogic
 
   lazy val severalTags: PackratParser[List[QueryTag]] = aTag*

@@ -197,13 +197,44 @@ object APIv1Controller {
 
         import QueryParser.{Success, NoSuccess}
 
-
         QueryParser.parseQuery(query) match {
           case Success(tagList, _) =>
+            // Encodes a string as HTML, because most imageboards give tags in this format it seems.
+            def encode(s: String) = play.twirl.api.HtmlFormat.escape(s).toString
+
             def transformTag(t: QueryTag): org.bson.conversions.Bson = t match {
-              case SimpleTag(tag) => equal("tags", tag)
-              case ExactTag(tag) => equal("tags", tag)
-              case RegexTag(tag) => regex("tags", tag.regex, "i")
+              case SimpleTag(tag) => equal("tags", encode(tag))
+              case ExactTag(tag) => equal("tags", encode(tag))
+              case RegexTag(tag) => regex("tags", encode(tag.regex), "i")
+              case PropertyTag(prop, op, value) =>
+                // Number properties can use > < >= <=, so we test if the operator
+                // is any of those and if it is, we test if this operator can be applied to the propety.
+                // If it cannot, we throw an exception.
+                //
+                // TODO: maybe allow matching on date like this
+
+                import scala.reflect.runtime.universe._
+
+                if ((op.startsWith(">") || op.startsWith("<")) && !Image.intFields.contains(prop)) {
+                  throw new IllegalArgumentException(
+                    f"Operator $op cannot be applied to property $prop because the property is not numerical"
+                  )
+                }
+
+                op match {
+                  case "=" =>
+                    equal(
+                      prop,
+                      if (Image.intFields.contains(prop))
+                        value.toInt
+                      else
+                        encode(value)
+                    )
+                  case ">" => gt(prop, value.toInt)
+                  case "<" => lt(prop, value.toInt)
+                  case ">=" => gte(prop, value.toInt)
+                  case "<=" => lte(prop, value.toInt)
+                }
 
               case TagOR(left, right) => or(transformTag(left), transformTag(right))
               case TagAND(left, right) => and(transformTag(left), transformTag(right))
@@ -212,10 +243,17 @@ object APIv1Controller {
               case TagGroup(group) => and(group.map(transformTag):_*)
             }
 
-            // Put everything into an implicit AND
-            Right(
-              and(tagList.map(transformTag):_*)
-            )
+            try {
+              // Put everything into an implicit AND
+              Right(
+                and(tagList.map(transformTag):_*)
+              )
+            } catch {
+              // Some operator is not used properly
+              case e: IllegalArgumentException => Left(e.toString)
+              // Passed something that isn't a number to a numerical field
+              case e: NumberFormatException => Left(e.toString)
+            }
           case NoSuccess(errorString, _) =>
             Left(errorString)
         }

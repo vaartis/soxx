@@ -86,7 +86,6 @@
 <script>
  import URI from "urijs";
  import urlListener from "url-listener";
- import he from "he";
 
  Vue.config.productionTip = false
 
@@ -107,12 +106,12 @@
          updateSearchString() {
              let queryUrl = new URI(window.location);
              if (queryUrl.hasQuery("query"))
-                 this.searchString = he.decode(queryUrl.query(true)["query"]);
+                 this.searchString = queryUrl.query(true)["query"];
          },
 
          doSearch() {
              let queryUrl = new URI(window.location);
-             queryUrl.setQuery("query", he.encode(this.searchString, { useNamedReferences: true }));
+             queryUrl.setQuery("query", this.searchString);
 
              // If we are not on the search page, use it's address
              if (queryUrl.path() != "/" && queryUrl.path() != "/index") {
