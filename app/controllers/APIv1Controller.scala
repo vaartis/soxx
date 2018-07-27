@@ -246,7 +246,11 @@ object APIv1Controller {
             try {
               // Put everything into an implicit AND
               Right(
-                and(tagList.map(transformTag):_*)
+                if (tagList.isEmpty) { // AND can't be empty, so if there is nothing, we need to provide an empty document instead
+                  Document()
+                } else {
+                  and(tagList.map(transformTag):_*)
+                }
               )
             } catch {
               // Some operator is not used properly

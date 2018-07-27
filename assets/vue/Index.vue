@@ -41,6 +41,9 @@
  import _ from "lodash";
  import URI from "urijs";
 
+ import iziToast from "izitoast";
+ import "../node_modules/izitoast/dist/css/iziToast.min.css";
+
  import ImageModal from "./ImageModal.vue";
 
  Vue.config.productionTip = false
@@ -77,24 +80,37 @@
              fetch(imagesUrl)
                  .then(resp => resp.json())
                  .then(r => {
-                     this.images = r.result.images;
+                     if (r.ok) {
+                         this.images = r.result.images;
 
-                     // Get a `range` of elements around the `index`
-                     function getAround(array, index, range) {
-                         var least = index - range - 1;
-                         least = (least < 0) ? 0 : least;
-                         return _.slice(array, least, least + (range * 2) + 1);
+                         if (r.result.imageCount > 0) {
+                             // Get a `range` of elements around the `index`
+                             function getAround(array, index, range) {
+                                 var least = index - range - 1;
+                                 least = (least < 0) ? 0 : least;
+                                 return _.slice(array, least, least + (range * 2) + 1);
+                             }
+
+
+                             this.pages = getAround(
+                                 _.range(1, Math.floor(r.result.imageCount / 25)), // FIXME: make page size configurable
+                                 page,
+                                 5
+                             );
+
+                             // Go to the top of the page
+                             window.scroll(0, 0);
+                         } else {
+                             this.pages = 0;
+                         }
+                     } else {
+                         iziToast.error({
+                             title: "Search error",
+                             message: r.error,
+                             layout: 2,
+                             drag: false
+                         });
                      }
-
-
-                     this.pages = getAround(
-                         _.range(1, Math.floor(r.result.imageCount / 25)), // FIXME: make page size configurable
-                         page,
-                         5
-                     );
-
-                     // Go to the top of the page
-                     window.scroll(0, 0);
                  });
          },
 
