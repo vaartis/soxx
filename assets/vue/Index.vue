@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="container-fluid">
+        <div class="container-fluid" v-if="pages == null || pages.length > 0">
             <div class="row">
                 <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2" v-for="image in images" v-bind:key="image._id">
                     <div class="card">
@@ -24,6 +24,14 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="text-center" v-else>
+            <h2 v-once>
+                {{ genNoResultsString()  }}
+            </h2>
+            <sub class="text-muted">
+                No images found
+            </sub>
         </div>
 
         <div>
@@ -53,7 +61,10 @@
          return {
              imboard_info: {},
              images: [],
-             pages: [] // Actually just page numbers since you kinda can't use lodash in templates(?)
+             // Actually just page numbers since you kinda can't use lodash in templates(?)
+             // We use null as a starting value to indicate that the search did not start yet.
+             // If this is set to an empty array, then we render a string stating that no images were found
+             pages: null
          }
      },
 
@@ -101,7 +112,7 @@
                              // Go to the top of the page
                              window.scroll(0, 0);
                          } else {
-                             this.pages = 0;
+                             this.pages = [];
                          }
                      } else {
                          iziToast.error({
@@ -123,7 +134,20 @@
 
          goToPage(page) {
              window.history.pushState({page: page}, '', this.computePageUrl(page));
-         }
+         },
+
+         genNoResultsString() {
+             let strings = [
+                 "Can't help you with this one",
+                 "Nothing here",
+                 "Nobody here but us chickens!",
+                 "検索結果ありません",
+                 "検索するの結果は何もないよ",
+                 "🔎🖼❌"
+             ];
+
+             return strings[_.random(0, strings.length - 1)];
+         },
      },
 
      mounted() {
