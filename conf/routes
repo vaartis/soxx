@@ -11,6 +11,9 @@ GET     /image/:id                  controllers.SoxxController.image(id: String)
 
 GET     /admin                      controllers.SoxxController.admin
 
+GET     /admin_login                controllers.SoxxController.admin_login_page
+POST    /admin_login                controllers.SoxxController.admin_login
+
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file)
 GET     /image_files/*file          controllers.SoxxController.image_files(file)

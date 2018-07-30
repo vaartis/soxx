@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.compat.Platform.{currentTime => now}
 import scala.concurrent.duration.FiniteDuration
 
+import play.api.mvc.{ Session, Cookie }
 import resource._
 
 object Helpers {
@@ -45,6 +46,13 @@ object Helpers {
     } catch {
       case NonFatal(e) => Left(Seq(e))
     }
+
+  def isAdminLoggedIn(session: Session) = {
+    session.get("soxx.admin.logged-in") match {
+      case Some("1") => true
+      case _ => false
+    }
+  }
 
 
   implicit class RequestHelpers(req: play.api.mvc.Request[_]) {

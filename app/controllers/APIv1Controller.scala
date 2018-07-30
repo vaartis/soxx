@@ -17,6 +17,7 @@ import org.mongodb.scala._
 import soxx.mongowrapper._
 import soxx.search._
 import soxx.scrappers._
+import soxx.helpers.Helpers
 import soxx.helpers.Helpers.RequestHelpers
 
 @Singleton
@@ -171,13 +172,19 @@ class APIv1Controller @Inject()
     }
   }
 
-  def admin_panel_socket = WebSocket.accept[JsValue, JsValue] { req =>
+  def admin_panel_socket = WebSocket.acceptOrResult[JsValue, JsValue] { req =>
     import play.api.libs.streams._
     import soxx.admin._
 
-    ActorFlow.actorRef { out =>
-      AdminPanelActor.props(out)
-    }
+    Future.successful(
+      if (Helpers.isAdminLoggedIn(req.session)) {
+        Right(ActorFlow.actorRef { out =>
+          AdminPanelActor.props(out)
+        })
+      } else {
+        Left(Forbidden)
+      }
+    )
   }
 }
 
