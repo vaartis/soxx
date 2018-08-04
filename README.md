@@ -69,11 +69,11 @@ Some important things include:
 ## Somewhat of a roadmap
 
 - [x] S3 integration
-- Searching
+- [x] Searching
   - [x] Basic image search by tags and tag regular expressions
   - [x] Advanced image search with grouping, AND, OR
   - [x] Similar image search
-  - [ ] Searching images by their properties (width, height, rating)
+  - [x] Searching images by their properties (width, height, rating)
 
 ## Contributions
 
