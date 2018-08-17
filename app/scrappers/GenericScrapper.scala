@@ -109,109 +109,126 @@ abstract class GenericScrapper(
       implicit val actualMaterializer = ActorMaterializer()(context)
       downloadMaterializer = Some(actualMaterializer)
 
-      for (
-        imagesToDownload <-
+      /** Just update the metadata, this is needed if several imageboards have the same image */
+      def updateMetadataOnlyFalse(image: Image): Future[Boolean] =
         imageCollection
-        .find(combine(
-          equal("metadataOnly", true), // Find the images that only have metadata
-          equal("from.name", name)
-        )).toFuture
-      ) {
-        logger.info(f"Images to download: ${imagesToDownload.length}")
+          .updateOne(equal("_id", image._id), set("metadataOnly", false))
+          .head
+          .map { r =>
+            if (r.wasAcknowledged) {
+              logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state")
+              true
+            } else false
+          }
 
-        Source(imagesToDownload.to[collection.immutable.Iterable])
-          .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
+      /** Save images to S3 */
+      def downloadToS3(image: Image): Future[Boolean] = {
+        import soxx.s3._
+        val imageName = f"${image.md5}${image.extension}"
 
-            val imageName = f"${image.md5}${image.extension}"
+        val (region, endpoint, bucketName) = (
+          config.getOptional[String]("soxx.s3.region"),
+          config.get[String]("soxx.s3.endpoint"),
+          config.get[String]("soxx.s3.bucket-name"),
+        )
 
-            // Just update the metadata
-            // This is needed if several imageboards have the same image
-            def updateMetadataOnlyFalse() =
-              imageCollection
-                  .updateOne(equal("_id", image._id), set("metadataOnly", false))
-                  .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state") }
-                  .toFuture
+        val s3Uploader = injector.instanceOf(BindingKey(classOf[ActorRef]).qualifiedWith("s3-uploader"))
 
-            if (config.get[Boolean]("soxx.s3.enabled")) {
-              import soxx.s3._
+        (s3Uploader ? ImageExists(imageName))
+          .map(_.asInstanceOf[Boolean])
+          .flatMap { exists =>
+            if (exists) updateMetadataOnlyFalse(image) else {
+              ws.url(image.from.head.image)
+                .get()
+                .flatMap { resp =>
+                  val stream = resp.bodyAsSource.runWith(StreamConverters.asInputStream(5.seconds))
+                  val size = resp.body.length
+                  val contentType = resp.contentType
 
-              val (region, endpoint, bucketName) = (
-                config.getOptional[String]("soxx.s3.region"),
-                config.get[String]("soxx.s3.endpoint"),
-                config.get[String]("soxx.s3.bucket-name"),
-              )
+                  // Start uploading image and update the metadataOnly mark
+                  // No logging here since the uploader logs things already
+                  s3Uploader
+                    .ask(UploadImage(imageName, stream, size, contentType))
+                    .flatMap {
+                      case true =>
+                        stream.close()
 
-              val s3Uploader = injector.instanceOf(BindingKey(classOf[ActorRef]).qualifiedWith("s3-uploader"))
-
-              (s3Uploader ? ImageExists(imageName))
-                .map { a => (s3Uploader, a) }
-                .flatMap { case (s3Uploader, exists_) =>
-                  val exists = exists_.asInstanceOf[Boolean]
-                  if (exists) {
-                    updateMetadataOnlyFalse()
-                  } else {
-                    ws.url(image.from.head.image)
-                      .get()
-                      .flatMap { resp =>
-                        val stream = resp.bodyAsSource.runWith(StreamConverters.asInputStream(5.seconds))
-                        val size = resp.body.length
-                        val contentType = resp.contentType
-
-                        // Start uploading image and update the metadataOnly mark
-                        // No logging here since the uploader logs things already
-                        s3Uploader
-                          .ask(UploadImage(imageName, stream, size, contentType))
-                          .flatMap {
-                            case true =>
-                              stream.close()
-
-                              imageCollection
-                                .updateOne(
-                                  equal("_id", image._id),
-                                  combine(
-                                    set("metadataOnly", false),
-                                    set("s3", true),
-                                    set("s3url", f"""${region.map(_ + '.').getOrElse("")}$endpoint/$bucketName/$imageName""")
-                                  )
-                                )
-                                .toFuture
-                          }
-                      }
-                  }
+                        imageCollection
+                          .updateOne(
+                            equal("_id", image._id),
+                            combine(
+                              set("metadataOnly", false),
+                              set("s3", true),
+                              set("s3url", f"""${region.map(_ + '.').getOrElse("")}$endpoint/$bucketName/$imageName""")
+                            )
+                          )
+                          .head
+                          .map { r => if (r.wasAcknowledged) true else false }
+                    }
                 }
-            } else {
-              val imagesDir = Paths.get(config.get[String]("soxx.scrappers.downloadDirectory"))
-              if (Files.notExists(imagesDir)) {
-                // Create the directory to store images in..
-                Files.createDirectories(imagesDir)
-              }
-
-              val savePath = Paths.get(imagesDir.toString, imageName)
-              if (Files.exists(savePath)) {
-                updateMetadataOnlyFalse()
-              } else {
-                // Actually download the image
-                ws.url(image.from.head.image).get()
-                  .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
-                  .flatMap {
-                    case IOResult(_, Success(Done)) =>
-                      imageCollection
-                        .updateOne(equal("_id", image._id), set("metadataOnly", false))
-                        .head
-                        .map { v => if (v.wasAcknowledged) { logger.info(f"Saved image ${image._id}") } }
-                    case IOResult(_, Failure(e)) => throw e;
-                  }
-              }
             }
           }
-          .recover { case x => logger.error(f"Downloading error: $x") }
-          .runWith(Sink.ignore)
-          .andThen {
-            case Success(_) =>
-              stopDownloading()
-              logger.info("Finished downloading")
+      }
+
+      /** Save images to files */
+      def downloadToFile(image: Image): Future[Boolean] = {
+        val imagesDir = Paths.get(config.get[String]("soxx.scrappers.downloadDirectory"))
+        if (Files.notExists(imagesDir)) {
+          // Create the directory to store images in..
+          Files.createDirectories(imagesDir)
+        }
+
+        val imageName = f"${image.md5}${image.extension}"
+
+        val savePath = Paths.get(imagesDir.toString, imageName)
+        if (Files.exists(savePath)) {
+          updateMetadataOnlyFalse(image)
+        } else {
+          // Actually download the image
+          ws.url(image.from.head.image).get()
+            .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
+            .flatMap {
+              case IOResult(_, Success(Done)) => imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
+              case IOResult(_, Failure(e)) => throw e;
+            } // Set the metadataOnly to true
+            .map { v =>
+              if (v.wasAcknowledged) {
+                true
+              } else {
+                false
+              }
+            }
         }
       }
+
+      val shouldDownloadToS3 = config.get[Boolean]("soxx.s3.enabled")
+
+      Source.fromFuture(
+        imageCollection
+          .find(combine(
+            equal("metadataOnly", true), // Find the images that only have metadata
+            equal("from.name", name)
+          )).toFuture)
+        .flatMapConcat { imgs =>
+          logger.info(f"Images to download: ${imgs.length}")
+
+          Source(imgs.to[collection.immutable.Iterable])
+        }
+        .mapAsyncUnordered(maxImageFetchingConcurrency) { image =>
+          (if (shouldDownloadToS3) downloadToS3(image) else downloadToFile(image)).map { isOk => (isOk, image._id) /* Use image ID to log success */ }
+        }
+        .recover { case x => logger.error(f"Downloading error: $x") }
+        .runWith(Sink.foreachParallel(maxPageFetchingConcurrency){ case (isOk: Boolean, imageId: org.bson.types.ObjectId) =>
+          if (isOk)
+            logger.info(f"Finished downloading image ${imageId.toString}")
+          else
+            logger.error(f"Failed to download image ${imageId.toString}")
+        })
+        .andThen {
+          case Success(_) =>
+            stopDownloading()
+            logger.info("Finished downloading")
+        }
     }
   }
 
