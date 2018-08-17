@@ -216,78 +216,89 @@ abstract class GenericScrapper(
   }
 
   protected final def startIndexing(fromPage: Int, toPage: Option[Int])(implicit senderRef: SenderRef): Unit = {
-    if (materializer == None) {
+    /** Gets the image count, writes it into the database, translates image count into page count and logs the total page count. */
+    def getPageRange = {
+      getImageCount
+        .andThen { case Success(imageCount) => mongo.db.getCollection[BoardInfo]("imboard_info").updateOne(equal("_id", name), set("reportedImageCount", imageCount)).toFuture }
+        .map { imageCount =>
+          val pageCount = {
+            // Get the page count from the image count and page size
+            // Round up in case there's a small amount of images
+            val pageCount = Math.ceil(imageCount.floatValue / pageSize.floatValue).intValue
+
+            // Limit to `toPage` if needed
+            toPage match {
+              // If the pageCount is less, then just use it, otherwise use toPage
+              case Some(toPage) => Math.min(pageCount, toPage)
+              case None => pageCount
+            }
+          }
+
+          logger.info(f"Total page count: ${pageCount}")
+
+          fromPage to pageCount
+        }
+    }
+
+    /** Transform the page into the operations required to write it into the database. */
+    def operationsForPage(page: Seq[Image], pageNum: Int) = {
+      Future.sequence(
+        page.map { img =>
+          imageCollection.find(equal("md5", img.md5)).toFuture.map { maybeImages =>
+            if (maybeImages.isEmpty) {
+              // New picture
+              InsertOneModel(img)
+            } else {
+              // Update the old one
+              UpdateOneModel(
+                equal("md5", img.md5),
+                combine(
+                  // Merge tags
+                  addEachToSet("tags", img.tags:_*),
+
+                  // Update score
+                  set("from.$[board].score", img.from.head.score),
+                ),
+
+                // Find this imageboard's entry by name
+                UpdateOptions()
+                  .arrayFilters(Arrays.asList(
+                    equal("board.name", name)
+                  ))
+              )
+            }
+          }
+        }
+      ).map { ops => (ops, pageNum)  }
+    }
+
+    if (materializer.isEmpty) {
       implicit val actualMaterializer = ActorMaterializer()(context)
       materializer = Some(actualMaterializer)
 
-      for (
-        imageCount <- getImageCount;
-        _ <- mongo.db.getCollection[BoardInfo]("imboard_info").updateOne(equal("_id", name), set("reportedImageCount", imageCount)).toFuture
-      ) {
-        logger.info(f"Updated reported image count to $imageCount")
-
-        val pageCount = {
-          // Get the page count from the image count and page size
-          // Round up in case there's a small amount of images
-          val pageCount = Math.ceil(imageCount.floatValue / pageSize.floatValue).intValue
-
-          // Limit to `toPage` if needed
-          toPage match {
-            // If the pageCount is less, then just use it, otherwise use toPage
-            case Some(toPage) => Math.min(pageCount, toPage)
-            case None => pageCount
-          }
+      Source.fromFuture(getPageRange)
+        .flatMapConcat(Source(_))
+        .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
+        .map { case (scrapperImages, currentPage) =>
+          (
+            scrapperImages.map(scrapperImageToImage).collect { case Some(i) => i },
+            currentPage
+          )
         }
-        logger.info(f"Total page count: ${pageCount}")
-
-        Source(fromPage to pageCount)
-          // Download pages
-          .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
-          .map { case (scrapperImages, currentPage) => // Again, page here is needed downstream..
-            val operations =
-              scrapperImages
-                .map(scrapperImageToImage)
-                .collect { case Some(i) => i } // Filter out all None's and return images
-                .map { img =>
-                  // If it's a new picture
-                  if (Await.result(imageCollection.find(equal("md5", img.md5)).toFuture(), 5 seconds).isEmpty) {
-                    InsertOneModel(img)
-                  } else {
-                    UpdateOneModel(
-                      equal("md5", img.md5),
-                      combine(
-                        // Merge tags
-                        addEachToSet("tags", img.tags:_*),
-
-                        // Update score
-                        set("from.$[board].score", img.from.head.score),
-                      ),
-
-                      // Find this imageboard's entry by name
-                      UpdateOptions()
-                        .arrayFilters(Arrays.asList(
-                          equal("board.name", name)
-                        ))
-                    )
-                  }
-                }
-            (operations, currentPage)
-          }
-          .mapAsyncUnordered(maxPageFetchingConcurrency) { case (operations, currentPage) =>
-            imageCollection
-              .bulkWrite(operations, BulkWriteOptions().ordered(false))
-              .toFuture.map { r => (r, currentPage) }
-          }
-          .runForeach { case (res, currentPage) if res.wasAcknowledged => logger.info(s"Finished page ${currentPage}") }
-          .recover {
-            case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
-            case x => logger.error(f"Scrapping error: $x")
-          }
-      }.andThen {
-        case Success(_) =>
-          stopIndexing()
-          logger.info("Scrapping finished")
-      }
+        .mapAsyncUnordered(maxPageFetchingConcurrency)(Function.tupled(operationsForPage))
+        .mapAsyncUnordered(maxPageFetchingConcurrency){ case (ops, currentPage) =>
+          imageCollection.bulkWrite(ops, BulkWriteOptions().ordered(false)).toFuture.map { r => (r, currentPage) }
+        }
+        .runForeach { case (res, currentPage) if res.wasAcknowledged => logger.info(s"Finished page ${currentPage}") }
+        .recover {
+          case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
+          case x => logger.error(f"Scrapping error: $x")
+        }
+        .andThen {
+          case Success(_) =>
+            stopIndexing()
+            logger.info("Finished indexing")
+        }
     }
   }
 
