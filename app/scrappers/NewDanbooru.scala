@@ -44,7 +44,7 @@ class NewDanbooruScrapper(
   // Old limited to 100
   override val pageSize = 200
 
-  override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[NewDanbooruImage], Int)] =
+  override def getPageImages(currentPage: Int): Future[Seq[NewDanbooruImage]] =
     ws
       .url(s"${baseUrl}/${apiAddition}.json")
       .addQueryStringParameters(
@@ -52,7 +52,7 @@ class NewDanbooruScrapper(
         ("page", currentPage.toString),
       )
       .get()
-      .map { res => (res.json.as[Seq[NewDanbooruImage]], currentPage) }
+      .map(_.json.as[Seq[NewDanbooruImage]])
 
   override def scrapperImageToImage(img: NewDanbooruImage): Option[Image] = {
     // Image isn't broken / deleted

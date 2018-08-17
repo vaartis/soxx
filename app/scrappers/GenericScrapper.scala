@@ -83,10 +83,12 @@ abstract class GenericScrapper(
   /** Return the page's images.
     *
     * Provided with the page number, this function returns serialized images on this page.
-    * This function needs to return the same page provided to it in the beginning,
-    * this is needed for the Akka streams to send it down the stream.
     */
-  def getPageImagesAndCurrentPage(page: Int): Future[(Seq[ScrapperImage], Int)]
+  def getPageImages(page: Int): Future[Seq[ScrapperImage]]
+
+  /** Add the page number to images for akka stream processing */
+  private def getPageImagesAndCurrentPage(page: Int): Future[(Seq[ScrapperImage], Int)] =
+    getPageImages(page).map { imgs => (imgs, page) }
 
   implicit val akkaTimeout = akka.util.Timeout(5.seconds)
 

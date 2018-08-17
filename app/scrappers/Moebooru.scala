@@ -45,7 +45,7 @@ class MoebooruScrapper(
   override def extractImageCount(from: Elem) =
     (from \\ "posts" \ "@count").map{ _.text }.head.toInt
 
-  override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[MoebooruImage], Int)] =
+  override def getPageImages(currentPage: Int): Future[Seq[MoebooruImage]] =
     ws
       .url(s"${baseUrl}/${apiAddition}.json")
       .addQueryStringParameters(
@@ -53,7 +53,7 @@ class MoebooruScrapper(
         ("page", currentPage.toString),
       )
       .get()
-      .map { res => (res.json.as[Seq[MoebooruImage]], currentPage) }
+      .map(_.json.as[Seq[MoebooruImage]])
 
   override def scrapperImageToImage(img: MoebooruImage): Option[Image] = {
     import java.net.URI

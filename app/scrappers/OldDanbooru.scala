@@ -43,11 +43,11 @@ class OldDanbooruScrapper(
   override def extractImageCount(from: Elem) =
     (from \\ "posts" \ "@count").map{ _.text }.head.toInt
 
-  override def getPageImagesAndCurrentPage(currentPage: Int): Future[(Seq[OldDanbooruImage], Int)] =
+  override def getPageImages(currentPage: Int): Future[Seq[OldDanbooruImage]] =
     ws
       .url(s"${baseUrl}/${apiAddition}&pid=${currentPage.toString}&json=1")
       .get()
-      .map { res => (res.json.as[Seq[OldDanbooruImage]], currentPage) }
+      .map(_.json.as[Seq[OldDanbooruImage]])
 
   override def scrapperImageToImage(img: OldDanbooruImage): Option[Image] = {
     import io.scalaland.chimney.dsl._
