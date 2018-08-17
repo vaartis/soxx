@@ -193,8 +193,14 @@ abstract class GenericScrapper(
                 // Actually download the image
                 ws.url(image.from.head.image).get()
                   .flatMap { _.bodyAsSource.runWith(FileIO.toPath(savePath)) } // Save the file
-                  .flatMap { case IOResult(_, Success(Done)) => imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture } // Set the metadataOnly to true
-                  .map { case v: UpdateResult if v.wasAcknowledged => logger.info(f"Saved image ${image._id}") }
+                  .flatMap {
+                    case IOResult(_, Success(Done)) =>
+                      imageCollection
+                        .updateOne(equal("_id", image._id), set("metadataOnly", false))
+                        .head
+                        .map { v => if (v.wasAcknowledged) { logger.info(f"Saved image ${image._id}") } }
+                    case IOResult(_, Failure(e)) => throw e;
+                  }
               }
             }
           }
