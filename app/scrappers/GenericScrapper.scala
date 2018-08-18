@@ -1,25 +1,25 @@
 package soxx.scrappers
 
-import akka.Done
 import java.nio.file._
 import java.util.Arrays
-import scala.concurrent.duration._
 import scala.util._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import
+  scala.concurrent.{ Await, ExecutionContext, Future },
+  scala.concurrent.duration._
 
-import akka.stream._
-import akka.stream.scaladsl._
-import akka.actor._
-import akka.pattern.ask
-import play.api.inject.{ Injector, BindingKey }
-import play.api.libs.json._
-import play.api.libs.ws._
-import play.api.{ Logger, Configuration }
-import org.mongodb.scala._
-import org.mongodb.scala.model._
-import com.mongodb.client.result.UpdateResult
-import org.mongodb.scala.model.Updates._
-import org.mongodb.scala.model.Filters._
+import
+  akka.Done,
+  akka.actor._,
+  akka.stream._, akka.stream.scaladsl._,
+  akka.pattern.ask
+import
+  play.api.{ Logger, Configuration },
+  play.api.inject.{ Injector, BindingKey },
+  play.api.libs.json._, play.api.libs.ws._
+import
+  org.mongodb.scala._,
+  org.mongodb.scala.model._,  org.mongodb.scala.model.Updates._, org.mongodb.scala.model.Filters._,
+  com.mongodb.client.result.UpdateResult
 
 import soxx.mongowrapper._
 

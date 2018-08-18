@@ -2,9 +2,8 @@ package soxx.scrappers
 
 import scala.concurrent._
 
-import play.api.inject.Injector
+import play.api.libs.json._, play.api.inject.Injector
 import xml.Elem
-import play.api.libs.json._
 
 class MoebooruScrapper(
   name: String,

@@ -2,8 +2,7 @@ package soxx.scrappers
 
 import scala.concurrent._
 
-import play.api.inject.Injector
-import play.api.libs.json._
+import play.api.inject.Injector, play.api.libs.json._
 
 class NewDanbooruScrapper(
   name: String,
