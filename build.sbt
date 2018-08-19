@@ -17,6 +17,7 @@ fork in Test := false // Disable forking for tests, so we can pass system proper
 
 scalacOptions ++= Seq(
   "-feature",
+  "-Ypartial-unification",
   /*
   "-Ywarn-unused-import",
   "-Ywarn-unused",
@@ -31,7 +32,10 @@ libraryDependencies ++= Seq(
   "com.jsuereth" %% "scala-arm" % "2.0",
   "io.scalaland" %% "chimney" % "0.2.1",
 
+  "org.typelevel" %% "cats-core" % "1.2.0",
+
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.0",
+
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",
 
   "io.minio" % "minio" % "4.0.2",

@@ -12,7 +12,8 @@ import akka.util._
 import akka.stream.Materializer
 import play.api.mvc._
 import play.api.libs.json._
-import org.mongodb.scala._
+import org.mongodb.scala._, org.mongodb.scala.model.Filters.equal
+import cats.{ Inject => _, _ }, cats.data._, cats.implicits._
 
 import soxx.mongowrapper._
 import soxx.search._
@@ -45,27 +46,27 @@ class APIv1Controller @Inject()
     val collection = mongo.db.getCollection[BoardInfo]("imboard_info")
 
     name
-      .map { nm => collection.find(Document("_id" -> nm)).toFuture }
-      .getOrElse { collection.find().toFuture }
-      .map { v => Ok(Json.toJson(v)) }
+      .map { nm => collection.find(equal("_id", nm)) }
+      .getOrElse(collection.find()) // If the name wasn't provide, get all boards
+      .toFuture.map { v => Ok(Json.toJson(v)) }
   }
 
   def image(id: String) = Action.async { implicit request: Request[AnyContent] =>
-    import org.mongodb.scala.model.Filters.equal
     import org.bson.types.ObjectId
 
     mongo.db.getCollection[Image]("images")
       .find(equal("_id", new ObjectId(id)))
-      .toFuture
-      .map {
-        case Seq(theImage) =>
-          Ok(
-            Json.obj(
+      .headOption
+      .map { v =>
+        Ok(
+          v match {
+            case Some(theImage) => Json.obj(
               "ok" -> true,
               "result" -> Json.toJson(theImage.toFrontend(request.hostWithProtocol))
             )
-          )
-        case Seq() => Ok(Json.obj("ok" -> false, "error" -> f"The image ${id} doesn't exist"))
+            case None => Json.obj("ok" -> false, "error" -> f"The image ${id} doesn't exist")
+          }
+        )
       }
   }
 
@@ -77,32 +78,27 @@ class APIv1Controller @Inject()
 
     APIv1Controller.tagStringToQuery(query) match {
       case Right(mongoSearchQuery) =>
-        imageCollection
-          .countDocuments(mongoSearchQuery)
-          .toFuture()
-          .flatMap { foundImageCount =>
-            imageCollection.find(mongoSearchQuery)
-              .skip(offset)
-              .limit(limit)
-              .sort(Document("_id" -> -1))
-              .toFuture
-              .map { images =>
-                // Make it an actual result and return the future
-
-                Ok(
-                  Json.obj(
-                    "ok" -> true,
-                    "result" ->
-                      Json.obj(
-                        "images" -> images.map(i => Json.toJson(i.toFrontend(request.hostWithProtocol))),
-                        "imageCount" -> foundImageCount
-                      )
-                  )
+        (
+          imageCollection.countDocuments(mongoSearchQuery).toFuture, // Image count
+          imageCollection.find(mongoSearchQuery) // Images
+            .skip(offset)
+            .limit(limit)
+            .sort(Document("_id" -> -1))
+            .toFuture
+        ).mapN { (foundImageCount, images) =>
+          Ok(
+            Json.obj(
+              "ok" -> true,
+              "result" ->
+                Json.obj(
+                  "images" -> images.map(i => Json.toJson(i.toFrontend(request.hostWithProtocol))),
+                  "imageCount" -> foundImageCount
                 )
-              }
-          }
+            )
+          )
+        }
       case Left(errorString) =>
-        Future { Ok(Json.obj("ok" -> false, "error" -> errorString)) }
+        Future.successful { Ok(Json.obj("ok" -> false, "error" -> errorString)) }
     }
   }
 
@@ -178,9 +174,7 @@ class APIv1Controller @Inject()
 
     Future.successful(
       if (Helpers.isAdminLoggedIn(req.session)) {
-        Right(ActorFlow.actorRef { out =>
-          AdminPanelActor.props(out)
-        })
+        Right(ActorFlow.actorRef { out => AdminPanelActor.props(out) })
       } else {
         Left(Forbidden)
       }

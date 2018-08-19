@@ -20,6 +20,7 @@ import
   org.mongodb.scala._,
   org.mongodb.scala.model._,  org.mongodb.scala.model.Updates._, org.mongodb.scala.model.Filters._,
   com.mongodb.client.result.UpdateResult
+import cats._, cats.data._, cats.implicits._
 
 import soxx.mongowrapper._
 
@@ -117,13 +118,14 @@ abstract class GenericScrapper(
           .map { r =>
             if (r.wasAcknowledged) {
               logger.info(f"Image ${image._id} already saved, updated 'metadataOnly' state")
-              true
-            } else false
+            }
+            r.wasAcknowledged
           }
 
       /** Save images to S3 */
       def downloadToS3(image: Image): Future[Boolean] = {
         import soxx.s3._
+
         val imageName = f"${image.md5}${image.extension}"
 
         val (region, endpoint, bucketName) = (
@@ -134,52 +136,47 @@ abstract class GenericScrapper(
 
         val s3Uploader = injector.instanceOf(BindingKey(classOf[ActorRef]).qualifiedWith("s3-uploader"))
 
-        (s3Uploader ? ImageExists(imageName))
-          .map(_.asInstanceOf[Boolean])
-          .flatMap { exists =>
-            if (exists) updateMetadataOnlyFalse(image) else {
-              ws.url(image.from.head.image)
-                .get()
-                .flatMap { resp =>
-                  val stream = resp.bodyAsSource.runWith(StreamConverters.asInputStream(5.seconds))
-                  val size = resp.body.length
-                  val contentType = resp.contentType
+        Monad[Future].ifM(
+          (s3Uploader ? ImageExists(imageName)).map(_.asInstanceOf[Boolean])
+        )(
+          ifTrue = updateMetadataOnlyFalse(image),
+          ifFalse =
+            ws.url(image.from.head.image)
+              .get()
+              .flatMap { resp =>
+                val stream = resp.bodyAsSource.runWith(StreamConverters.asInputStream(5.seconds))
+                val size = resp.body.length
+                val contentType = resp.contentType
 
-                  // Start uploading image and update the metadataOnly mark
-                  // No logging here since the uploader logs things already
-                  s3Uploader
-                    .ask(UploadImage(imageName, stream, size, contentType))
-                    .flatMap {
-                      case true =>
-                        stream.close()
-
-                        imageCollection
-                          .updateOne(
-                            equal("_id", image._id),
-                            combine(
-                              set("metadataOnly", false),
-                              set("s3", true),
-                              set("s3url", f"""${region.map(_ + '.').getOrElse("")}$endpoint/$bucketName/$imageName""")
-                            )
-                          )
-                          .head
-                          .map { r => if (r.wasAcknowledged) true else false }
-                    }
-                }
-            }
-          }
+                // Start uploading image and update the metadataOnly mark
+                // No logging here since the uploader logs things already
+                Monad[Future].ifM(
+                  s3Uploader.ask(UploadImage(imageName, stream, size, contentType)).map(_.asInstanceOf[Boolean])
+                )(
+                  ifTrue = {
+                    imageCollection
+                      .updateOne(
+                        equal("_id", image._id),
+                        combine(
+                          set("metadataOnly", false),
+                          set("s3", true),
+                          set("s3url", f"""${region.map(_ + '.').getOrElse("")}$endpoint/$bucketName/$imageName""")
+                        )
+                      ).head.map(_.wasAcknowledged)
+                  },
+                  ifFalse = Future.successful(false)
+                ).andThen { case _ => stream.close() }
+              }
+        )
       }
 
       /** Save images to files */
       def downloadToFile(image: Image): Future[Boolean] = {
         val imagesDir = Paths.get(config.get[String]("soxx.scrappers.downloadDirectory"))
-        if (Files.notExists(imagesDir)) {
-          // Create the directory to store images in..
-          Files.createDirectories(imagesDir)
-        }
+        if (Files.notExists(imagesDir))
+          Files.createDirectories(imagesDir) // Create the directory to store images in..
 
         val imageName = f"${image.md5}${image.extension}"
-
         val savePath = Paths.get(imagesDir.toString, imageName)
         if (Files.exists(savePath)) {
           updateMetadataOnlyFalse(image)
@@ -190,14 +187,7 @@ abstract class GenericScrapper(
             .flatMap {
               case IOResult(_, Success(Done)) => imageCollection.updateOne(equal("_id", image._id), set("metadataOnly", false)).toFuture
               case IOResult(_, Failure(e)) => throw e;
-            } // Set the metadataOnly to true
-            .map { v =>
-              if (v.wasAcknowledged) {
-                true
-              } else {
-                false
-              }
-            }
+            }.map(_.wasAcknowledged)
         }
       }
 
@@ -286,7 +276,7 @@ abstract class GenericScrapper(
             }
           }
         }
-      ).map { ops => (ops, pageNum)  }
+      ).map { ops => (ops, pageNum) }
     }
 
     if (materializer.isEmpty) {
