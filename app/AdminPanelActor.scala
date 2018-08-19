@@ -142,21 +142,14 @@ class AdminPanelActor(out: ActorRef)(
         case "imboard-scrapper-action" =>
           val data = msg.as[ScrapperActionMsg]
 
-          system
-            .actorSelection(system / "scrapper-supervisor" / f"${data.imboard}-scrapper")
-            .resolveOne
-            .andThen { case Success(actorRef) =>
-              actorRef ! (data.action match {
+          system.actorSelection(system / "scrapper-supervisor" / f"${data.imboard}-scrapper") ! (data.action match {
                 case "start-indexing" => StartIndexing()
                 case "stop-indexing" => StopIndexing
 
                 case "start-downloading" => StartDownloading
                 case "stop-downloading" => StopDownloading
-              })
-            }
-            .andThen { case _ =>
-              self ! Json.obj("tp" -> "imboard-scrapper-status", "imboard" -> data.imboard)
-            }
+          })
+          self ! Json.obj("tp" -> "imboard-scrapper-status", "imboard" -> data.imboard)
       }
   }
 }
