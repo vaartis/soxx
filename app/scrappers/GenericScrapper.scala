@@ -1,10 +1,9 @@
 package soxx.scrappers
 
 import java.nio.file._
-import java.util.Arrays
 import scala.util._
 import
-  scala.concurrent.{ Await, ExecutionContext, Future },
+  scala.concurrent.Future,
   scala.concurrent.duration._
 
 import
@@ -22,7 +21,9 @@ import
   com.mongodb.client.result.UpdateResult
 import cats._, cats.data._, cats.implicits._
 
-import soxx.mongowrapper._
+import
+  soxx.mongowrapper._,
+  soxx.scrappers.parts._
 
 case class SenderRef(val ref: ActorRef) extends AnyVal
 
@@ -33,12 +34,12 @@ case class SenderRef(val ref: ActorRef) extends AnyVal
  * for most of the imageboards.
  */
 abstract class GenericScrapper(
-  name: String,
+  val name: String,
   val baseUrl: String,
   favicon: String,
 
   injector: Injector
-) extends Actor {
+) extends Actor with IndexingParts {
 
   // Injected stuff
   protected implicit val (ws, mongo, ec, config) =
@@ -73,36 +74,10 @@ abstract class GenericScrapper(
   /** JSON formatter for the image. */
   implicit val imageFormat: OFormat[ScrapperImage]
 
-  /** Get the total image count.
-    *
-    * Returns the total number of images on the imageboard.
-    * It doesn't need to bother about the maximum number of images, since bounding will
-    * be handeled automatically in the indexing function
-   */
-  def getImageCount: Future[Int]
-
-  /** Return the page's images.
-    *
-    * Provided with the page number, this function returns serialized images on this page.
-    */
-  def getPageImages(page: Int): Future[Seq[ScrapperImage]]
-
-  /** Add the page number to images for akka stream processing */
-  private def getPageImagesAndCurrentPage(page: Int): Future[(Seq[ScrapperImage], Int)] =
-    getPageImages(page).map { imgs => (imgs, page) }
-
   implicit val akkaTimeout = akka.util.Timeout(5.seconds)
 
-  private val imageCollection = mongo.db.getCollection[Image]("images")
+  protected val imageCollection = mongo.db.getCollection[Image]("images")
 
-  /** Converts the internal image to the actual image used in the database.
-    *
-    * This function should set the [[Image.from]] field to a [[scala.collection.Seq]] with a single element:
-    * information about this imageboard.
-    */
-  def scrapperImageToImage(img: ScrapperImage): Option[Image]
-
-  protected final var materializer: Option[ActorMaterializer] = None
   protected final var downloadMaterializer: Option[ActorMaterializer] = None
 
   protected final def startDownloading()(implicit senderRef: SenderRef): Unit = {
@@ -222,104 +197,17 @@ abstract class GenericScrapper(
     }
   }
 
-  protected final def startIndexing(fromPage: Int, toPage: Option[Int])(implicit senderRef: SenderRef): Unit = {
-    /** Gets the image count, writes it into the database, translates image count into page count and logs the total page count. */
-    def getPageRange = {
-      getImageCount
-        .andThen { case Success(imageCount) => mongo.db.getCollection[BoardInfo]("imboard_info").updateOne(equal("_id", name), set("reportedImageCount", imageCount)).toFuture }
-        .map { imageCount =>
-          val pageCount = {
-            // Get the page count from the image count and page size
-            // Round up in case there's a small amount of images
-            val pageCount = Math.ceil(imageCount.floatValue / pageSize.floatValue).intValue
-
-            // Limit to `toPage` if needed
-            toPage match {
-              // If the pageCount is less, then just use it, otherwise use toPage
-              case Some(toPage) => Math.min(pageCount, toPage)
-              case None => pageCount
-            }
-          }
-
-          logger.info(f"Total page count: ${pageCount}")
-
-          fromPage to pageCount
-        }
-    }
-
-    /** Transform the page into the operations required to write it into the database. */
-    def operationsForPage(page: Seq[Image], pageNum: Int) = {
-      Future.sequence(
-        page.map { img =>
-          imageCollection.find(equal("md5", img.md5)).toFuture.map { maybeImages =>
-            if (maybeImages.isEmpty) {
-              // New picture
-              InsertOneModel(img)
-            } else {
-              // Update the old one
-              UpdateOneModel(
-                equal("md5", img.md5),
-                combine(
-                  // Merge tags
-                  addEachToSet("tags", img.tags:_*),
-
-                  // Update score
-                  set("from.$[board].score", img.from.head.score),
-                ),
-
-                // Find this imageboard's entry by name
-                UpdateOptions()
-                  .arrayFilters(Arrays.asList(
-                    equal("board.name", name)
-                  ))
-              )
-            }
-          }
-        }
-      ).map { ops => (ops, pageNum) }
-    }
-
-    if (materializer.isEmpty) {
-      implicit val actualMaterializer = ActorMaterializer()(context)
-      materializer = Some(actualMaterializer)
-
-      Source.fromFuture(getPageRange)
-        .flatMapConcat(Source(_))
-        .mapAsyncUnordered(maxPageFetchingConcurrency)(getPageImagesAndCurrentPage)
-        .map { case (scrapperImages, currentPage) =>
-          (
-            scrapperImages.map(scrapperImageToImage).collect { case Some(i) => i },
-            currentPage
-          )
-        }
-        .mapAsyncUnordered(maxPageFetchingConcurrency)(Function.tupled(operationsForPage))
-        .mapAsyncUnordered(maxPageFetchingConcurrency){ case (ops, currentPage) =>
-          imageCollection.bulkWrite(ops, BulkWriteOptions().ordered(false)).toFuture.map { r => (r, currentPage) }
-        }
-        .runForeach { case (res, currentPage) if res.wasAcknowledged => logger.info(s"Finished page ${currentPage}") }
-        .recover {
-          case _: AbruptStageTerminationException => logger.info("Materializer is already terminated")
-          case x => logger.error(f"Scrapping error: $x")
-        }
-        .andThen {
-          case Success(_) =>
-            stopIndexing()
-            logger.info("Finished indexing")
-        }
-    }
-  }
-
   private def scrapperStatus = ScrapperStatus(
     imboard = name,
-    isIndexing = !materializer.isEmpty,
+    isIndexing = !indexingMaterializer.isEmpty,
     isDownloading = !downloadMaterializer.isEmpty
   )
 
 
   protected final def stopIndexing()(implicit senderRef: SenderRef): Unit = {
-    materializer.foreach { mat =>
+    indexingMaterializer.foreach { mat =>
       mat.shutdown()
-      materializer = None
+      indexingMaterializer = None
     }
 
     senderRef.ref ! scrapperStatus
